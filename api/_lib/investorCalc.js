@@ -14,6 +14,22 @@ function yearsSince(dateStr) {
   return Math.max(0, (now - then) / (1000 * 60 * 60 * 24 * 365.25));
 }
 
+function formatDateDMY(d) {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// The date the next guarantee milestone is paid out: exactly `years` years after the
+// investment date, minus one day (e.g. invested 1/1/2026 -> first payout 31/12/2026).
+function addPeriodMinusOneDay(dateStr, years) {
+  const d = new Date(dateStr);
+  d.setFullYear(d.getFullYear() + years);
+  d.setDate(d.getDate() - 1);
+  return d;
+}
+
 async function computeInvestorSummary(investor, investorList, holdingsList) {
   const usSymbols = holdingsList.filter((h) => h.exchange === "US").map((h) => h.symbol);
   const klseSymbols = holdingsList.filter((h) => h.exchange === "KLSE").map((h) => h.symbol);
@@ -49,6 +65,20 @@ async function computeInvestorSummary(investor, investorList, holdingsList) {
 
   const symbols = [...new Set(holdingsList.map((h) => h.symbol))];
 
+  // Next guarantee milestone: the upcoming annual target that hasn't been reached yet.
+  let investmentDate = null;
+  let guaranteedTargetAmount = null;
+  let guaranteedPayoutDate = null;
+  if (investor.joinDate) {
+    const joinDateObj = new Date(investor.joinDate);
+    if (!isNaN(joinDateObj.getTime())) {
+      investmentDate = formatDateDMY(joinDateObj);
+      const periodNumber = Math.floor(years) + 1;
+      guaranteedTargetAmount = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, periodNumber);
+      guaranteedPayoutDate = formatDateDMY(addPeriodMinusOneDay(investor.joinDate, periodNumber));
+    }
+  }
+
   return {
     name: investor.name,
     contributed,
@@ -57,6 +87,9 @@ async function computeInvestorSummary(investor, investorList, holdingsList) {
     gain,
     gainPct,
     usingGuarantee: guaranteedValue > actualValue,
+    investmentDate,
+    guaranteedTargetAmount,
+    guaranteedPayoutDate,
     symbols,
     errors: [...usQ.errors, ...klseQ.errors],
   };
