@@ -187,7 +187,8 @@ async function saveHoldingsNow() {
     if (!res.ok) {
       const err = await res.json();
       console.error('Save failed:', err);
-      showSaveStatus(`Save failed: ${err.error || 'unknown error'}`, true);
+      const debugStr = err.debug ? ` [${JSON.stringify(err.debug)}]` : '';
+      showSaveStatus(`Save failed: ${err.error || 'unknown error'}${debugStr}`, true);
     } else {
       showSaveStatus('Saved', false);
     }

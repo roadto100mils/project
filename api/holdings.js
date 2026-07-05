@@ -7,20 +7,34 @@ const { Redis } = require("@upstash/redis");
 
 // Works with either naming convention Vercel/Upstash may inject depending on how
 // the integration was installed.
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
+
+function envDebugInfo() {
+  return {
+    hasUrl: !!REDIS_URL,
+    hasToken: !!REDIS_TOKEN,
+    urlLooksValid: !!REDIS_URL && REDIS_URL.startsWith("https://"),
+    urlPreview: REDIS_URL ? REDIS_URL.slice(0, 25) + "..." : null,
+  };
+}
 
 module.exports = async function handler(req, res) {
   const customerId = "default"; // TODO: replace with authenticated customer id
+
+  if (!REDIS_URL || !REDIS_TOKEN) {
+    res.status(500).json({ error: "Redis environment variables not found", debug: envDebugInfo() });
+    return;
+  }
 
   if (req.method === "GET") {
     try {
       const holdings = await redis.get(`holdings:${customerId}`);
       res.status(200).json({ holdings: holdings || null });
     } catch (e) {
-      res.status(500).json({ error: `Could not read holdings: ${e.message}` });
+      res.status(500).json({ error: `Could not read holdings: ${e.message}`, debug: envDebugInfo() });
     }
     return;
   }
@@ -35,7 +49,7 @@ module.exports = async function handler(req, res) {
       await redis.set(`holdings:${customerId}`, holdings);
       res.status(200).json({ ok: true });
     } catch (e) {
-      res.status(500).json({ error: `Could not save holdings: ${e.message}` });
+      res.status(500).json({ error: `Could not save holdings: ${e.message}`, debug: envDebugInfo() });
     }
     return;
   }
