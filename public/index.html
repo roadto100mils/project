@@ -80,7 +80,10 @@
     <h1 style="font-size:1.6rem; text-align:center; margin-bottom:24px;">Admin Sign In</h1>
     <div style="background:#12161F; border:1px solid #232838; border-radius:16px; padding:28px;">
       <label style="display:block; color:#8A8F9E; font-size:0.85rem; margin-bottom:8px;">Password</label>
-      <input type="password" id="adminPasswordInput" style="width:100%; background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:10px 12px; border-radius:8px; font-family:inherit; font-size:0.95rem; margin-bottom:16px;" />
+      <div style="position:relative; margin-bottom:16px;">
+        <input type="password" id="adminPasswordInput" style="width:100%; background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:10px 40px 10px 12px; border-radius:8px; font-family:inherit; font-size:0.95rem; box-sizing:border-box;" />
+        <button type="button" onclick="toggleAdminPwVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#8A8F9E; cursor:pointer; font-size:0.75rem; padding:4px;">Show</button>
+      </div>
       <button onclick="tryAdminLogin()" style="width:100%; background:#D4A657; color:#12161F; border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer;">Sign In</button>
       <div id="adminGateError" style="color:#EB5757; font-size:0.85rem; margin-top:12px; text-align:center;"></div>
     </div>
@@ -495,6 +498,18 @@ function addInvestor() {
   investors.push({ id, name: 'New Customer', contributed: 0, username: `customer${id}`, password: '' });
   saveInvestors();
   renderInvestors();
+}
+
+function toggleAdminPwVisibility() {
+  const input = document.getElementById('adminPasswordInput');
+  const btn = event.target;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+  }
 }
 
 async function init() {

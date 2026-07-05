@@ -68,7 +68,10 @@ function renderLogin(errorMsg) {
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" id="password" autocomplete="current-password" />
+        <div style="position:relative;">
+          <input type="password" id="password" autocomplete="current-password" style="padding-right:44px; box-sizing:border-box; width:100%;" />
+          <button type="button" onclick="togglePwVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#8A8F9E; cursor:pointer; font-size:0.75rem; padding:4px;">Show</button>
+        </div>
       </div>
       <button class="login-btn" onclick="doLogin()">Sign In</button>
       ${errorMsg ? `<div class="login-error">${errorMsg}</div>` : ''}
@@ -77,6 +80,18 @@ function renderLogin(errorMsg) {
   document.getElementById('password').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') doLogin();
   });
+}
+
+function togglePwVisibility() {
+  const input = document.getElementById('password');
+  const btn = event.target;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+  }
 }
 
 async function doLogin() {
