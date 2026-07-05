@@ -232,6 +232,11 @@ function computeRows() {
 }
 
 function render() {
+  if (holdings.length === 0) {
+    const body = document.getElementById('holdingsBody');
+    if (body) body.innerHTML = '<tr><td colspan="8" class="faint" style="padding:24px 16px;">Loading your saved holdings…</td></tr>';
+    return;
+  }
   const rows = computeRows();
   const totalValue = rows.reduce((s, r) => s + r.valueMYR, 0);
   const totalCost = rows.reduce((s, r) => s + r.costMYR, 0);

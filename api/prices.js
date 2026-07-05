@@ -48,11 +48,18 @@ module.exports = async function handler(req, res) {
             const r = await fetch(`https://api.itick.org/stock/quote?region=MY&code=${sym}`, {
               headers: { accept: "application/json", token: ITICK_TOKEN },
             });
-            const json = await r.json();
+            const rawText = await r.text();
+            let json;
+            try {
+              json = JSON.parse(rawText);
+            } catch {
+              result.errors.push(`KLSE ${sym}: HTTP ${r.status}, non-JSON: ${rawText.slice(0, 150)}`);
+              return;
+            }
             if (json.code === 0 && json.data && json.data.ld) {
               result.klse[sym] = parseFloat(json.data.ld);
             } else {
-              result.errors.push(`KLSE ${sym}: ${json.msg || "code " + json.code}`);
+              result.errors.push(`KLSE ${sym}: HTTP ${r.status}, response: ${JSON.stringify(json).slice(0, 150)}`);
             }
           } catch (e) {
             result.errors.push(`KLSE ${sym} fetch failed: ${e.message}`);
