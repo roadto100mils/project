@@ -140,6 +140,37 @@
   <button class="btn btn-ghost" onclick="addHolding()">+ Add holding</button>
   <span class="faint mono" id="saveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
 
+  <div style="margin-top:56px;">
+    <div class="eyebrow">Customers</div>
+    <h1 style="font-size:1.4rem;">Investor Shares</h1>
+    <p class="faint" style="font-size:0.8rem; margin-top:-8px; margin-bottom:20px;">
+      Each customer's share is calculated automatically from how much they've contributed, relative to the total. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th class="num">Contributed (MYR)</th>
+            <th class="num">Share</th>
+            <th class="num">Current Value</th>
+            <th>Username</th>
+            <th>Password</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="investorsBody"></tbody>
+      </table>
+    </div>
+    <p class="faint" style="font-size:0.75rem; margin-top:8px;">
+      All customers sign in at the same page: <span class="mono" id="customerPortalUrl"></span>.
+      Share each customer's username and password with them directly (e.g. via WhatsApp).
+    </p>
+    <button class="btn btn-ghost" onclick="addInvestor()">+ Add customer</button>
+    <span class="faint mono" id="investorSaveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
+  </div>
+
   <div class="faint" style="font-size:0.75rem; margin-top:40px; padding-top:24px;">
     Prices in this prototype are simulated for demonstration. Not investment advice.
   </div>
@@ -245,12 +276,14 @@ function render() {
   const totalGainPct = totalCost ? (totalGain / totalCost) * 100 : 0;
 
   document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
+  window.currentTotalValue = totalValue;
   const gainEl = document.getElementById('totalGain');
   gainEl.textContent = (totalGain >= 0 ? '+' : '-') + 'RM ' + fmt(Math.abs(totalGain));
   gainEl.style.color = totalGain >= 0 ? '#6FCF97' : '#EB5757';
   const retEl = document.getElementById('totalReturn');
   retEl.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%';
   retEl.style.color = totalGainPct >= 0 ? '#6FCF97' : '#EB5757';
+  renderInvestors();
 
   // Ticker
   const tickerItems = rows.concat(rows).map(r => {
@@ -362,8 +395,94 @@ async function refreshPrices() {
   render();
 }
 
+let investors = [];
+let investorNextId = 1;
+let investorSaveTimer = null;
+
+async function loadInvestors() {
+  try {
+    const res = await fetch('/api/investors');
+    const data = await res.json();
+    investors = data.investors || [];
+  } catch (e) {
+    console.error('Could not load investors:', e);
+    investors = [];
+  }
+  investorNextId = Math.max(0, ...investors.map(i => i.id || 0)) + 1;
+}
+
+function saveInvestorsNow() {
+  fetch('/api/investors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ investors }),
+  }).then(async (res) => {
+    const el = document.getElementById('investorSaveStatus');
+    if (!res.ok) {
+      const err = await res.json();
+      if (el) { el.textContent = `Save failed: ${err.error}`; el.style.color = '#EB5757'; }
+    } else if (el) {
+      el.textContent = 'Saved';
+      el.style.color = '#5C6270';
+    }
+  }).catch((e) => {
+    const el = document.getElementById('investorSaveStatus');
+    if (el) { el.textContent = `Save failed: ${e.message}`; el.style.color = '#EB5757'; }
+  });
+}
+
+function saveInvestors() {
+  clearTimeout(investorSaveTimer);
+  const el = document.getElementById('investorSaveStatus');
+  if (el) { el.textContent = 'Saving…'; el.style.color = '#5C6270'; }
+  investorSaveTimer = setTimeout(saveInvestorsNow, 600);
+}
+
+function renderInvestors() {
+  const body = document.getElementById('investorsBody');
+  if (!body) return;
+
+  const portalUrlEl = document.getElementById('customerPortalUrl');
+  if (portalUrlEl) portalUrlEl.textContent = `${window.location.origin}/customer.html`;
+
+  const totalValue = window.currentTotalValue || 0;
+  const totalContributed = investors.reduce((s, i) => s + (parseFloat(i.contributed) || 0), 0);
+
+  body.innerHTML = investors.map(inv => {
+    const contributed = parseFloat(inv.contributed) || 0;
+    const share = totalContributed > 0 ? contributed / totalContributed : 0;
+    const value = totalValue * share;
+    return `<tr>
+      <td><input class="edit-input wide" value="${inv.name || ''}" onchange="updateInvestorField(${inv.id},'name',this.value)" /></td>
+      <td class="num"><input class="edit-input" type="number" value="${contributed}" onchange="updateInvestorField(${inv.id},'contributed',this.value)" /></td>
+      <td class="num mono">${(share * 100).toFixed(1)}%</td>
+      <td class="num mono">RM ${fmt(value)}</td>
+      <td><input class="edit-input" value="${inv.username || ''}" onchange="updateInvestorField(${inv.id},'username',this.value)" /></td>
+      <td><input class="edit-input" value="${inv.password || ''}" onchange="updateInvestorField(${inv.id},'password',this.value)" /></td>
+      <td class="row-actions"><button class="del" onclick="removeInvestor(${inv.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateInvestorField(id, field, value) {
+  investors = investors.map(i => {
+    if (i.id !== id) return i;
+    return Object.assign({}, i, { [field]: field === 'contributed' ? (parseFloat(value) || 0) : value });
+  });
+  saveInvestors();
+  renderInvestors();
+}
+function removeInvestor(id) { investors = investors.filter(i => i.id !== id); saveInvestors(); renderInvestors(); }
+function addInvestor() {
+  const id = investorNextId++;
+  investors.push({ id, name: 'New Customer', contributed: 0, username: `customer${id}`, password: '' });
+  saveInvestors();
+  renderInvestors();
+}
+
 async function init() {
   await loadHoldings();
+  await loadInvestors();
   render();
   refreshPrices();
   setInterval(refreshPrices, 30000);
