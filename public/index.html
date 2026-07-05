@@ -162,7 +162,7 @@
     <div class="eyebrow">Customers</div>
     <h1 style="font-size:1.4rem;">Investor Shares</h1>
     <p class="faint" style="font-size:0.8rem; margin-top:-8px; margin-bottom:20px;">
-      Each customer's share is calculated automatically from how much they've contributed, relative to the total. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
+      Each customer's value is the higher of (a) their actual proportional share of the fund's performance, or (b) a 6% per annum guaranteed floor, compounded from their join date. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
     </p>
 
     <div class="table-wrap">
@@ -171,6 +171,7 @@
           <tr>
             <th>Name</th>
             <th class="num">Contributed (MYR)</th>
+            <th>Join Date</th>
             <th class="num">Share</th>
             <th class="num">Current Value</th>
             <th>Username</th>
@@ -458,6 +459,15 @@ function saveInvestors() {
   investorSaveTimer = setTimeout(saveInvestorsNow, 600);
 }
 
+const GUARANTEED_ANNUAL_RATE = 0.06;
+
+function yearsSince(dateStr) {
+  if (!dateStr) return 0;
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return 0;
+  return Math.max(0, (Date.now() - then) / (1000 * 60 * 60 * 24 * 365.25));
+}
+
 function renderInvestors() {
   const body = document.getElementById('investorsBody');
   if (!body) return;
@@ -467,16 +477,24 @@ function renderInvestors() {
 
   const totalValue = window.currentTotalValue || 0;
   const totalContributed = investors.reduce((s, i) => s + (parseFloat(i.contributed) || 0), 0);
+  const fundReturnPct = totalContributed > 0 ? (totalValue - totalContributed) / totalContributed : 0;
 
   body.innerHTML = investors.map(inv => {
     const contributed = parseFloat(inv.contributed) || 0;
-    const share = totalContributed > 0 ? contributed / totalContributed : 0;
-    const value = totalValue * share;
+    const actualValue = contributed * (1 + fundReturnPct);
+    const years = yearsSince(inv.joinDate);
+    const guaranteedValue = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+    const value = Math.max(actualValue, guaranteedValue);
+    const share = totalValue > 0 ? value / totalValue : 0;
+    const usingGuarantee = guaranteedValue > actualValue;
     return `<tr>
       <td><input class="edit-input wide" value="${inv.name || ''}" onchange="updateInvestorField(${inv.id},'name',this.value)" /></td>
       <td class="num"><input class="edit-input" type="number" value="${contributed}" onchange="updateInvestorField(${inv.id},'contributed',this.value)" /></td>
+      <td><input class="edit-input" type="date" value="${inv.joinDate || ''}" onchange="updateInvestorField(${inv.id},'joinDate',this.value)" /></td>
       <td class="num mono">${(share * 100).toFixed(1)}%</td>
-      <td class="num mono">RM ${fmt(value)}</td>
+      <td class="num mono" title="${usingGuarantee ? '6% p.a. guarantee applied' : 'Based on actual fund performance'}">
+        RM ${fmt(value)}${usingGuarantee ? ' <span class="faint" style="font-size:0.7rem;">(floor)</span>' : ''}
+      </td>
       <td><input class="edit-input" value="${inv.username || ''}" onchange="updateInvestorField(${inv.id},'username',this.value)" /></td>
       <td><input class="edit-input" value="${inv.password || ''}" onchange="updateInvestorField(${inv.id},'password',this.value)" /></td>
       <td class="row-actions"><button class="del" onclick="removeInvestor(${inv.id})">✕</button></td>
@@ -495,7 +513,8 @@ function updateInvestorField(id, field, value) {
 function removeInvestor(id) { investors = investors.filter(i => i.id !== id); saveInvestors(); renderInvestors(); }
 function addInvestor() {
   const id = investorNextId++;
-  investors.push({ id, name: 'New Customer', contributed: 0, username: `customer${id}`, password: '' });
+  const today = new Date().toISOString().slice(0, 10);
+  investors.push({ id, name: 'New Customer', contributed: 0, joinDate: today, username: `customer${id}`, password: '' });
   saveInvestors();
   renderInvestors();
 }
