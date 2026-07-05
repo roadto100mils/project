@@ -2,14 +2,15 @@
 // scoped by customer ID. customerId is hardcoded to "default" for now — once real
 // customer access control is added, replace this with the authenticated customer's
 // actual ID so each customer gets their own saved portfolio.
+//
+// Protected by a shared admin password (see api/_lib/adminAuth.js) — this holds your
+// actual holdings data, so it should never be readable/writable without the password.
 
 const { Redis } = require("@upstash/redis");
+const { checkAdminAuth } = require("./_lib/adminAuth");
 
-// Works with either naming convention Vercel/Upstash may inject depending on how
-// the integration was installed.
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-
 const redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
 
 function envDebugInfo() {
@@ -22,6 +23,8 @@ function envDebugInfo() {
 }
 
 module.exports = async function handler(req, res) {
+  if (!checkAdminAuth(req, res)) return;
+
   const customerId = "default"; // TODO: replace with authenticated customer id
 
   if (!REDIS_URL || !REDIS_TOKEN) {

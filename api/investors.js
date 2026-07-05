@@ -1,14 +1,20 @@
 // Stores/retrieves the list of investors (customers) and how much each has contributed.
-// Used by the admin dashboard to manage customers, and by customer-view.js to compute
+// Used by the admin dashboard to manage customers, and by customer-login.js to compute
 // each customer's share of the fund.
+//
+// Protected by a shared admin password — this data includes customer usernames and
+// passwords, so it must never be readable without authentication.
 
 const { Redis } = require("@upstash/redis");
+const { checkAdminAuth } = require("./_lib/adminAuth");
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
 
 module.exports = async function handler(req, res) {
+  if (!checkAdminAuth(req, res)) return;
+
   if (!REDIS_URL || !REDIS_TOKEN) {
     res.status(500).json({ error: "Redis environment variables not found" });
     return;

@@ -74,6 +74,21 @@
 </head>
 <body>
 
+<div id="adminGate" style="display:none; min-height:100vh; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="max-width:360px; width:100%; padding:24px;">
+    <div class="eyebrow" style="text-align:center;">Portfolio Ledger</div>
+    <h1 style="font-size:1.6rem; text-align:center; margin-bottom:24px;">Admin Sign In</h1>
+    <div style="background:#12161F; border:1px solid #232838; border-radius:16px; padding:28px;">
+      <label style="display:block; color:#8A8F9E; font-size:0.85rem; margin-bottom:8px;">Password</label>
+      <input type="password" id="adminPasswordInput" style="width:100%; background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:10px 12px; border-radius:8px; font-family:inherit; font-size:0.95rem; margin-bottom:16px;" />
+      <button onclick="tryAdminLogin()" style="width:100%; background:#D4A657; color:#12161F; border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer;">Sign In</button>
+      <div id="adminGateError" style="color:#EB5757; font-size:0.85rem; margin-top:12px; text-align:center;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboardRoot" style="display:none;">
+
 <div class="ticker-wrap"><div class="ticker-track mono" id="ticker"></div></div>
 
 <div class="wrap">
@@ -176,6 +191,8 @@
   </div>
 </div>
 
+</div>
+
 <script>
 // Keys now live server-side in /api/prices — nothing secret in this file.
 
@@ -193,7 +210,7 @@ let saveTimer = null;
 
 async function loadHoldings() {
   try {
-    const res = await fetch('/api/holdings');
+    const res = await fetch('/api/holdings', { headers: authHeaders() });
     const data = await res.json();
     if (data.holdings && data.holdings.length) {
       holdings = data.holdings;
@@ -212,7 +229,7 @@ async function saveHoldingsNow() {
   try {
     const res = await fetch('/api/holdings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ holdings }),
     });
     if (!res.ok) {
@@ -401,7 +418,7 @@ let investorSaveTimer = null;
 
 async function loadInvestors() {
   try {
-    const res = await fetch('/api/investors');
+    const res = await fetch('/api/investors', { headers: authHeaders() });
     const data = await res.json();
     investors = data.investors || [];
   } catch (e) {
@@ -414,7 +431,7 @@ async function loadInvestors() {
 function saveInvestorsNow() {
   fetch('/api/investors', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ investors }),
   }).then(async (res) => {
     const el = document.getElementById('investorSaveStatus');
@@ -487,7 +504,70 @@ async function init() {
   refreshPrices();
   setInterval(refreshPrices, 30000);
 }
-init();
+
+function authHeaders() {
+  const pw = sessionStorage.getItem('admin_password') || '';
+  return { 'Content-Type': 'application/json', 'X-Admin-Password': pw };
+}
+
+function showAdminGate(errorMsg) {
+  document.getElementById('adminGate').style.display = 'flex';
+  document.getElementById('dashboardRoot').style.display = 'none';
+  const errEl = document.getElementById('adminGateError');
+  errEl.textContent = errorMsg || '';
+}
+
+async function tryAdminLogin() {
+  const pwInput = document.getElementById('adminPasswordInput');
+  const password = pwInput.value;
+  try {
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAdminGate(data.error || 'Incorrect password');
+      return;
+    }
+    sessionStorage.setItem('admin_password', password);
+    document.getElementById('adminGate').style.display = 'none';
+    document.getElementById('dashboardRoot').style.display = 'block';
+    init();
+  } catch (e) {
+    showAdminGate(`Network error: ${e.message}`);
+  }
+}
+
+async function boot() {
+  document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryAdminLogin();
+  });
+  const saved = sessionStorage.getItem('admin_password');
+  if (!saved) {
+    showAdminGate();
+    return;
+  }
+  // Verify the saved password still works before showing the dashboard
+  try {
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: saved }),
+    });
+    if (!res.ok) {
+      sessionStorage.removeItem('admin_password');
+      showAdminGate();
+      return;
+    }
+    document.getElementById('dashboardRoot').style.display = 'block';
+    init();
+  } catch (e) {
+    showAdminGate(`Network error: ${e.message}`);
+  }
+}
+boot();
 </script>
 </body>
 </html>
