@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Portfolio Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0B0E14;
+    color: #E8E6DF;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .muted { color: #8A8F9E; }
+  .faint { color: #5C6270; }
+
+  .ticker-wrap {
+    background: #12161F;
+    border-bottom: 1px solid #232838;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 8px 0;
+  }
+  .ticker-track {
+    display: inline-flex;
+    animation: scroll 32s linear infinite;
+  }
+  .ticker-track:hover { animation-play-state: paused; }
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 16px;
+    font-size: 0.8rem;
+  }
+  .up { color: #6FCF97; }
+  .down { color: #EB5757; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 40px; }
+  .eyebrow { color: #8A8F9E; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: 2rem; font-weight: 700; color: #F4F2ED; margin: 0; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: 1px solid #232838; background: #12161F; color: #8A8F9E; }
+  .btn-primary { background: #D4A657; color: #12161F; border: none; }
+  .btn-ghost { background: transparent; border: 1px dashed #232838; color: #8A8F9E; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: #12161F; border: 1px solid #232838; border-radius: 12px; padding: 24px; }
+  .card-label { color: #8A8F9E; font-size: 0.8rem; margin-bottom: 8px; }
+  .card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.9rem; font-weight: 600; color: #F4F2ED; }
+
+  .settings { background: #12161F; border: 1px solid #232838; border-radius: 12px; padding: 20px; margin-bottom: 24px; display: none; }
+  .settings.open { display: block; }
+  .settings input { background: #0B0E14; border: 1px solid #232838; color: #E8E6DF; font-family: 'IBM Plex Mono', monospace; padding: 4px 10px; border-radius: 6px; width: 90px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  thead th { text-align: left; background: #12161F; color: #8A8F9E; font-weight: 500; padding: 12px 16px; }
+  thead th.num { text-align: right; }
+  tbody td { padding: 12px 16px; border-top: 1px solid #232838; }
+  tbody td.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .table-wrap { border: 1px solid #232838; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+  .edit-input { background: #0B0E14; border: 1px solid #232838; color: #E8E6DF; padding: 3px 6px; border-radius: 4px; width: 70px; font-family: inherit; }
+  .edit-input.wide { width: 120px; }
+  .row-actions button { border: none; background: #232838; color: #8A8F9E; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-right: 4px; }
+  .row-actions .del { background: transparent; color: #5C6270; }
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap"><div class="ticker-track mono" id="ticker"></div></div>
+
+<div class="wrap">
+  <div class="header">
+    <div>
+      <div class="eyebrow">Portfolio Ledger</div>
+      <h1>Total Asset Value</h1>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn" onclick="toggleSettings()">⚙ Settings</button>
+      <button class="btn btn-primary" onclick="refreshPrices()">⟳ Refresh</button>
+    </div>
+  </div>
+
+  <div class="settings" id="settingsPanel">
+    <div class="muted" style="font-size:0.8rem; margin-bottom:12px;">Display settings</div>
+    <label style="display:flex; align-items:center; gap:12px; font-size:0.9rem;">
+      USD → MYR rate
+      <input type="number" step="0.0001" id="fxRate" value="4.70" oninput="render()" />
+      <span class="faint mono" id="fxLiveTag" style="font-size:0.7rem;"></span>
+    </label>
+    <p class="faint" style="font-size:0.7rem; margin-top:6px;">Auto-updates from Twelve Data on every refresh. Edit manually to override.</p>
+    <p class="faint" style="font-size:0.75rem; margin-top:12px;">
+      US prices come from Twelve Data, KLSE prices from iTick. If either shows an error in the status line below the totals, check the browser console (right-click → Inspect → Console) for the raw API response.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Value (MYR)</div>
+      <div class="card-value" id="totalValue">RM 0.00</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Unrealized Gain/Loss</div>
+      <div class="card-value" id="totalGain">RM 0.00</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Return</div>
+      <div class="card-value" id="totalReturn">0.00%</div>
+    </div>
+  </div>
+
+  <div class="faint mono" style="font-size:0.75rem; margin-bottom:4px;" id="lastUpdated"></div>
+  <div class="mono" style="font-size:0.75rem; margin-bottom:16px;" id="dataStatus"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Name</th>
+          <th class="num">Qty</th>
+          <th class="num">Avg Cost</th>
+          <th class="num">Price</th>
+          <th class="num">Value (MYR)</th>
+          <th class="num">Gain/Loss</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="holdingsBody"></tbody>
+    </table>
+  </div>
+
+  <button class="btn btn-ghost" onclick="addHolding()">+ Add holding</button>
+  <span class="faint mono" id="saveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
+
+  <div class="faint" style="font-size:0.75rem; margin-top:40px; padding-top:24px;">
+    Prices in this prototype are simulated for demonstration. Not investment advice.
+  </div>
+</div>
+
+<script>
+// Keys now live server-side in /api/prices — nothing secret in this file.
+
+const seedHoldings = [
+  { id: 1, exchange: "KLSE", symbol: "MAYBANK", name: "Malayan Banking Bhd", qty: 2000, avgCost: 9.60, price: 10.42, currency: "MYR" },
+  { id: 2, exchange: "KLSE", symbol: "TENAGA", name: "Tenaga Nasional Bhd", qty: 1000, avgCost: 13.80, price: 14.55, currency: "MYR" },
+  { id: 3, exchange: "KLSE", symbol: "PBBANK", name: "Public Bank Bhd", qty: 1500, avgCost: 4.30, price: 4.18, currency: "MYR" },
+  { id: 4, exchange: "US", symbol: "AAPL", name: "Apple Inc.", qty: 40, avgCost: 195.20, price: 213.50, currency: "USD" },
+  { id: 5, exchange: "US", symbol: "NVDA", name: "NVIDIA Corp.", qty: 25, avgCost: 128.40, price: 141.90, currency: "USD" },
+];
+let holdings = [];
+let editingId = null;
+let nextId = 1;
+let saveTimer = null;
+
+async function loadHoldings() {
+  try {
+    const res = await fetch('/api/holdings');
+    const data = await res.json();
+    if (data.holdings && data.holdings.length) {
+      holdings = data.holdings;
+    } else {
+      holdings = seedHoldings;
+      await saveHoldingsNow(); // persist the starting sample data on first run
+    }
+  } catch (e) {
+    console.error('Could not load saved holdings, using sample data:', e);
+    holdings = seedHoldings;
+  }
+  nextId = Math.max(0, ...holdings.map(h => h.id)) + 1;
+}
+
+async function saveHoldingsNow() {
+  try {
+    const res = await fetch('/api/holdings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ holdings }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('Save failed:', err);
+      showSaveStatus(`Save failed: ${err.error || 'unknown error'}`, true);
+    } else {
+      showSaveStatus('Saved', false);
+    }
+  } catch (e) {
+    console.error('Save failed:', e);
+    showSaveStatus(`Save failed: ${e.message}`, true);
+  }
+}
+
+function saveHoldings() {
+  // Debounce so rapid edits don't fire a request per keystroke
+  clearTimeout(saveTimer);
+  showSaveStatus('Saving…', false);
+  saveTimer = setTimeout(saveHoldingsNow, 600);
+}
+
+function showSaveStatus(text, isError) {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? '#EB5757' : '#5C6270';
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+function fxRate() { return parseFloat(document.getElementById('fxRate').value) || 0; }
+function toMYR(val, currency) { return currency === "USD" ? val * fxRate() : val; }
+
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('open');
+}
+
+function computeRows() {
+  return holdings.map(h => {
+    const valueMYR = toMYR(h.price * h.qty, h.currency);
+    const costMYR = toMYR(h.avgCost * h.qty, h.currency);
+    const gain = valueMYR - costMYR;
+    const gainPct = costMYR ? (gain / costMYR) * 100 : 0;
+    return Object.assign({}, h, { valueMYR, costMYR, gain, gainPct });
+  });
+}
+
+function render() {
+  const rows = computeRows();
+  const totalValue = rows.reduce((s, r) => s + r.valueMYR, 0);
+  const totalCost = rows.reduce((s, r) => s + r.costMYR, 0);
+  const totalGain = totalValue - totalCost;
+  const totalGainPct = totalCost ? (totalGain / totalCost) * 100 : 0;
+
+  document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
+  const gainEl = document.getElementById('totalGain');
+  gainEl.textContent = (totalGain >= 0 ? '+' : '-') + 'RM ' + fmt(Math.abs(totalGain));
+  gainEl.style.color = totalGain >= 0 ? '#6FCF97' : '#EB5757';
+  const retEl = document.getElementById('totalReturn');
+  retEl.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%';
+  retEl.style.color = totalGainPct >= 0 ? '#6FCF97' : '#EB5757';
+
+  // Ticker
+  const tickerItems = rows.concat(rows).map(r => {
+    const cls = r.gain >= 0 ? 'up' : 'down';
+    const sym = r.currency === 'USD' ? '$' : 'RM';
+    return `<span class="ticker-item"><span class="muted">${r.symbol}</span>
+      <span class="${cls}" style="margin:0 8px;">${sym}${fmt(r.price)}</span>
+      <span class="${cls}">${r.gain >= 0 ? '▲' : '▼'} ${Math.abs(r.gainPct).toFixed(1)}%</span></span>`;
+  }).join('');
+  document.getElementById('ticker').innerHTML = tickerItems;
+
+  // Table
+  const body = document.getElementById('holdingsBody');
+  body.innerHTML = rows.map(r => {
+    const sym = r.currency === 'USD' ? '$' : 'RM';
+    const gainCls = r.gain >= 0 ? 'up' : 'down';
+    if (editingId === r.id) {
+      return `<tr>
+        <td><input class="edit-input" value="${r.symbol}" onchange="updateField(${r.id},'symbol',this.value)" /></td>
+        <td><input class="edit-input wide" value="${r.name}" onchange="updateField(${r.id},'name',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.qty}" onchange="updateField(${r.id},'qty',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.avgCost}" onchange="updateField(${r.id},'avgCost',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.price}" onchange="updateField(${r.id},'price',this.value)" /></td>
+        <td class="num">RM ${fmt(r.valueMYR)}</td>
+        <td class="num ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
+        <td class="row-actions"><button onclick="doneEdit()">Done</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+      <td class="muted">${r.name}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(r.qty)}</td>
+      <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
+      <td class="num mono">${sym}${fmt(r.price)}</td>
+      <td class="num mono">RM ${fmt(r.valueMYR)}</td>
+      <td class="num mono ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
+      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('lastUpdated').textContent = 'Last updated ' + new Date().toLocaleTimeString();
+}
+
+function updateField(id, field, value) {
+  holdings = holdings.map(h => {
+    if (h.id !== id) return h;
+    const numeric = ['qty', 'avgCost', 'price'].includes(field);
+    return Object.assign({}, h, { [field]: numeric ? (parseFloat(value) || 0) : value });
+  });
+  saveHoldings();
+  render();
+}
+function editRow(id) { editingId = id; render(); }
+function doneEdit() { editingId = null; render(); }
+function removeHolding(id) { holdings = holdings.filter(h => h.id !== id); saveHoldings(); render(); }
+function addHolding() {
+  const id = nextId++;
+  holdings.push({ id, exchange: 'KLSE', symbol: 'NEW', name: 'New Holding', qty: 100, avgCost: 1, price: 1, currency: 'MYR' });
+  editingId = id;
+  saveHoldings();
+  render();
+}
+async function refreshPrices() {
+  const usSymbols = holdings.filter(h => h.exchange === 'US').map(h => h.symbol);
+  const klseSymbols = holdings.filter(h => h.exchange === 'KLSE').map(h => h.symbol);
+
+  let data = { us: {}, klse: {}, fx: null, errors: [] };
+  try {
+    const url = `/api/prices?us=${encodeURIComponent(usSymbols.join(','))}&klse=${encodeURIComponent(klseSymbols.join(','))}`;
+    const res = await fetch(url);
+    data = await res.json();
+    console.log('Backend response:', data);
+  } catch (e) {
+    data.errors.push(`Could not reach backend: ${e.message}`);
+    console.error(e);
+  }
+
+  let usLiveCount = 0;
+  let klseLiveCount = 0;
+  holdings = holdings.map(h => {
+    if (h.exchange === 'KLSE') {
+      if (data.klse[h.symbol] !== undefined) {
+        klseLiveCount++;
+        return Object.assign({}, h, { price: data.klse[h.symbol] });
+      }
+      return h; // keep last known price on failure, no fake movement
+    }
+    if (data.us[h.symbol] !== undefined) {
+      usLiveCount++;
+      return Object.assign({}, h, { price: data.us[h.symbol] });
+    }
+    return h;
+  });
+
+  if (data.fx) {
+    document.getElementById('fxRate').value = data.fx.toFixed(4);
+    const tag = document.getElementById('fxLiveTag');
+    if (tag) { tag.textContent = 'live'; tag.style.color = '#6FCF97'; }
+  }
+
+  const statusEl = document.getElementById('dataStatus');
+  if (statusEl) {
+    const parts = [`${usLiveCount}/${usSymbols.length} US live`, `${klseLiveCount}/${klseSymbols.length} KLSE live`];
+    if (data.errors.length) parts.push(data.errors.join('; '));
+    statusEl.textContent = parts.join(' | ');
+    statusEl.style.color = data.errors.length ? '#EB5757' : '#8A8F9E';
+  }
+
+  render();
+}
+
+async function init() {
+  await loadHoldings();
+  render();
+  refreshPrices();
+  setInterval(refreshPrices, 30000);
+}
+init();
+</script>
+</body>
+</html>
