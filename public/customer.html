@@ -152,13 +152,13 @@ function renderSummary(data) {
         <div class="sub-value mono" style="font-size:1rem;">${data.investmentDate}</div>
       </div>
       <div class="sub-card">
-        <div class="sub-label">Guaranteed Return (6% p.a.)</div>
-        <div class="sub-value mono" style="font-size:1rem;">RM ${fmt(data.guaranteedTargetAmount)}</div>
+        <div class="sub-label">Guaranteed Return Payout Date</div>
+        <div class="sub-value mono" style="font-size:1rem;">${data.guaranteedPayoutDate}</div>
       </div>
     </div>
     <div class="symbols-card" style="margin-bottom:24px;">
-      <div class="symbols-label">Guaranteed return payout date</div>
-      <div class="mono" style="font-size:1.1rem; color:#D4A657;">${data.guaranteedPayoutDate}</div>
+      <div class="symbols-label">Guaranteed Return (6% p.a.)</div>
+      <div class="mono" style="font-size:1.1rem; color:#D4A657;">RM ${fmt(data.guaranteedTargetAmount)}</div>
     </div>
     ` : ''}
 
@@ -170,7 +170,7 @@ function renderSummary(data) {
     </div>
 
     <div class="footer-note">
-      Your share represents ${data.sharePct.toFixed(2)}% of the total fund. Not investment advice.
+      Not investment advice.
     </div>
   `;
 }
