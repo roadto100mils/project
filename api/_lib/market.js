@@ -39,10 +39,11 @@ async function fetchKlseQuotes(symbols) {
   const result = {};
   const names = {};
   const errors = [];
-  if (!symbols.length) return { result, names, errors };
+  const raw = {};
+  if (!symbols.length) return { result, names, errors, raw };
   if (!ITICK_TOKEN) {
     errors.push("ITICK_TOKEN not configured on server");
-    return { result, names, errors };
+    return { result, names, errors, raw };
   }
   await Promise.all(
     symbols.map(async (sym) => {
@@ -58,6 +59,7 @@ async function fetchKlseQuotes(symbols) {
           errors.push(`KLSE ${sym}: HTTP ${r.status}, non-JSON response`);
           return;
         }
+        raw[sym] = json.data || json;
         if (json.code === 0 && json.data && json.data.ld) {
           result[sym] = parseFloat(json.data.ld);
           if (json.data.n) names[sym] = json.data.n;
@@ -69,7 +71,7 @@ async function fetchKlseQuotes(symbols) {
       }
     })
   );
-  return { result, names, errors };
+  return { result, names, errors, raw };
 }
 
 async function fetchFxRate() {
