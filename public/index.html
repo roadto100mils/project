@@ -99,6 +99,7 @@
     <div>
       <div class="eyebrow">Portfolio Ledger</div>
       <h1>Total Asset Value</h1>
+      <div class="faint mono" id="todayDate" style="font-size:0.8rem; margin-top:4px;"></div>
     </div>
     <div style="display:flex; gap:12px;">
       <button class="btn" onclick="toggleSettings()">⚙ Settings</button>
@@ -345,6 +346,7 @@ function render() {
 
   document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
   window.currentTotalValue = totalValue;
+  window.currentTotalCost = totalCost;
   const gainEl = document.getElementById('totalGain');
   gainEl.textContent = (totalGain >= 0 ? '+' : '-') + 'RM ' + fmt(Math.abs(totalGain));
   gainEl.style.color = totalGain >= 0 ? '#6FCF97' : '#EB5757';
@@ -356,11 +358,11 @@ function render() {
   const cashEl = document.getElementById('cashBalance');
   const cashWarnEl = document.getElementById('cashWarning');
   if (cashEl) {
-    const cash = totalCapital - totalCost;
+    const cash = totalCapital + totalRealizedPnL - totalCost;
     if (cash < 0) {
       cashEl.textContent = 'RM 0.00';
       cashEl.style.color = '#EB5757';
-      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds total capital by RM ${fmt(Math.abs(cash))} — increase Total Fund Capital in Settings or reduce holdings.`;
+      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available capital (total capital + realized P&L) by RM ${fmt(Math.abs(cash))} — increase Total Fund Capital in Settings or reduce holdings.`;
     } else {
       cashEl.textContent = 'RM ' + fmt(cash);
       cashEl.style.color = '#F4F2ED';
@@ -677,9 +679,13 @@ function renderInvestors() {
   const portalUrlEl = document.getElementById('customerPortalUrl');
   if (portalUrlEl) portalUrlEl.textContent = `${window.location.origin}/customer.html`;
 
-  const totalValue = window.currentTotalValue || 0;
-  const totalContributed = investors.reduce((s, i) => s + (parseFloat(i.contributed) || 0), 0);
-  const fundReturnPct = totalContributed > 0 ? (totalValue - totalContributed) / totalContributed : 0;
+  const openValue = window.currentTotalValue || 0;
+  const openCost = window.currentTotalCost || 0;
+  const unrealizedGain = openValue - openCost;
+  const totalRealizedPnLForInvestors = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const overallGainForInvestors = unrealizedGain + totalRealizedPnLForInvestors;
+  const fundReturnPct = totalCapital > 0 ? overallGainForInvestors / totalCapital : 0;
+  const totalFundEquity = totalCapital + overallGainForInvestors;
 
   body.innerHTML = investors.map(inv => {
     const contributed = parseFloat(inv.contributed) || 0;
@@ -687,7 +693,7 @@ function renderInvestors() {
     const years = yearsSince(inv.joinDate);
     const guaranteedValue = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
     const value = Math.max(actualValue, guaranteedValue);
-    const share = totalValue > 0 ? value / totalValue : 0;
+    const share = totalFundEquity > 0 ? value / totalFundEquity : 0;
     const usingGuarantee = guaranteedValue > actualValue;
     return `<tr>
       <td><input class="edit-input wide" value="${inv.name || ''}" onchange="updateInvestorField(${inv.id},'name',this.value)" /></td>
@@ -757,6 +763,10 @@ function updateTotalCapital(value) {
 }
 
 async function init() {
+  const dateEl = document.getElementById('todayDate');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
   await loadHoldings();
   await loadInvestors();
   await loadTotalCapital();

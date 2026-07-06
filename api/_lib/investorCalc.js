@@ -30,7 +30,7 @@ function addPeriodMinusOneDay(dateStr, years) {
   return d;
 }
 
-async function computeInvestorSummary(investor, investorList, holdingsList) {
+async function computeInvestorSummary(investor, investorList, holdingsList, totalCapital, closedPositions) {
   const usSymbols = holdingsList.filter((h) => h.exchange === "US").map((h) => h.symbol);
   const klseSymbols = holdingsList.filter((h) => h.exchange === "KLSE").map((h) => h.symbol);
 
@@ -41,16 +41,27 @@ async function computeInvestorSummary(investor, investorList, holdingsList) {
   ]);
   const fxRate = fx || 4.7;
 
-  let totalFundValue = 0;
+  let totalOpenValue = 0;
+  let totalOpenCost = 0;
   for (const h of holdingsList) {
     const livePrice = h.exchange === "US" ? usQ.result[h.symbol] : klseQ.result[h.symbol];
     const price = livePrice !== undefined ? livePrice : h.price;
     const valueMYR = h.exchange === "US" ? price * h.qty * fxRate : price * h.qty;
-    totalFundValue += valueMYR;
+    const costMYR = h.exchange === "US" ? h.avgCost * h.qty * fxRate : h.avgCost * h.qty;
+    totalOpenValue += valueMYR;
+    totalOpenCost += costMYR;
   }
+  const unrealizedGain = totalOpenValue - totalOpenCost;
+  const realizedPnL = (closedPositions || []).reduce((s, p) => s + (p.realizedPnL || 0), 0);
+
+  // Overall fund performance, based on total capital rather than just what's
+  // currently in open positions — this way, realized gains/losses from closed
+  // trades stay reflected even after the position itself is gone.
+  const overallGain = unrealizedGain + realizedPnL;
+  const fundReturnPct = totalCapital > 0 ? overallGain / totalCapital : 0;
+  const totalFundValue = totalCapital + overallGain; // total fund equity (cash + holdings)
 
   const totalContributed = investorList.reduce((s, i) => s + (i.contributed || 0), 0);
-  const fundReturnPct = totalContributed > 0 ? (totalFundValue - totalContributed) / totalContributed : 0;
 
   const contributed = investor.contributed || 0;
   const actualValue = contributed * (1 + fundReturnPct);

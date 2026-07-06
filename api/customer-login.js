@@ -27,9 +27,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const [holdings, investors] = await Promise.all([
+    const [holdings, investors, totalCapital, closedPositions] = await Promise.all([
       redis.get("holdings:default"),
       redis.get("investors"),
+      redis.get("fundCapital"),
+      redis.get("closedPositions"),
     ]);
     const investorList = investors || [];
     const investor = investorList.find(
@@ -39,7 +41,13 @@ module.exports = async function handler(req, res) {
       res.status(401).json({ error: "Incorrect username or password" });
       return;
     }
-    const summary = await computeInvestorSummary(investor, investorList, holdings || []);
+    const summary = await computeInvestorSummary(
+      investor,
+      investorList,
+      holdings || [],
+      totalCapital || 0,
+      closedPositions || []
+    );
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json(summary);
   } catch (e) {
