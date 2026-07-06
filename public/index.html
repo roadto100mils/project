@@ -443,16 +443,17 @@ async function fetchNameForSymbol(id) {
   const h = holdings.find(x => x.id === id);
   if (!h || !h.symbol) return;
   try {
-    const url = h.exchange === 'US'
-      ? `/api/prices?us=${encodeURIComponent(h.symbol)}`
-      : `/api/prices?klse=${encodeURIComponent(h.symbol)}`;
-    const res = await fetch(url);
+    const res = await fetch(`/api/symbol-name?exchange=${encodeURIComponent(h.exchange)}&symbol=${encodeURIComponent(h.symbol)}`, {
+      headers: authHeaders(),
+    });
     const data = await res.json();
-    const name = h.exchange === 'US' ? data.usNames?.[h.symbol] : data.klseNames?.[h.symbol];
-    if (name) {
-      holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { name }) : x);
+    console.log('Symbol name lookup response:', data);
+    if (data.name) {
+      holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { name: data.name }) : x);
       saveHoldings();
       render();
+    } else {
+      console.warn('No name found:', data.debug);
     }
   } catch (e) {
     console.error('Could not auto-fetch name:', e);
@@ -554,7 +555,7 @@ async function refreshPrices() {
   const usSymbols = holdings.filter(h => h.exchange === 'US').map(h => h.symbol);
   const klseSymbols = holdings.filter(h => h.exchange === 'KLSE').map(h => h.symbol);
 
-  let data = { us: {}, usNames: {}, klse: {}, klseNames: {}, fx: null, errors: [] };
+  let data = { us: {}, usNames: {}, klse: {}, fx: null, errors: [] };
   try {
     const url = `/api/prices?us=${encodeURIComponent(usSymbols.join(','))}&klse=${encodeURIComponent(klseSymbols.join(','))}`;
     const res = await fetch(url);
@@ -571,7 +572,6 @@ async function refreshPrices() {
     if (h.exchange === 'KLSE') {
       const updated = Object.assign({}, h);
       if (data.klse[h.symbol] !== undefined) { klseLiveCount++; updated.price = data.klse[h.symbol]; }
-      if (!h.name && data.klseNames && data.klseNames[h.symbol]) updated.name = data.klseNames[h.symbol];
       return updated;
     }
     const updated = Object.assign({}, h);

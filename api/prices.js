@@ -23,8 +23,6 @@ module.exports = async function handler(req, res) {
     us: usQ.result,
     usNames: usQ.names,
     klse: klseQ.result,
-    klseNames: klseQ.names,
-    klseRawDebug: klseQ.raw,
     fx,
     errors,
   });

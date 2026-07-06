@@ -37,13 +37,11 @@ async function fetchUsQuotes(symbols) {
 
 async function fetchKlseQuotes(symbols) {
   const result = {};
-  const names = {};
   const errors = [];
-  const raw = {};
-  if (!symbols.length) return { result, names, errors, raw };
+  if (!symbols.length) return { result, errors };
   if (!ITICK_TOKEN) {
     errors.push("ITICK_TOKEN not configured on server");
-    return { result, names, errors, raw };
+    return { result, errors };
   }
   await Promise.all(
     symbols.map(async (sym) => {
@@ -59,10 +57,8 @@ async function fetchKlseQuotes(symbols) {
           errors.push(`KLSE ${sym}: HTTP ${r.status}, non-JSON response`);
           return;
         }
-        raw[sym] = json.data || json;
         if (json.code === 0 && json.data && json.data.ld) {
           result[sym] = parseFloat(json.data.ld);
-          if (json.data.n) names[sym] = json.data.n;
         } else {
           errors.push(`KLSE ${sym}: HTTP ${r.status}, response: ${JSON.stringify(json).slice(0, 150)}`);
         }
@@ -71,7 +67,33 @@ async function fetchKlseQuotes(symbols) {
       }
     })
   );
-  return { result, names, errors, raw };
+  return { result, errors };
+}
+
+// Looks up a KLSE company name via iTick's separate /stock/info endpoint
+// (the /stock/quote endpoint does not include a name field for Malaysian stocks).
+// Only call this on-demand (e.g. when a symbol is first entered), not on every
+// price refresh, to avoid burning through the free-tier rate limit.
+async function fetchKlseName(symbol) {
+  if (!ITICK_TOKEN) return { name: null, debug: "ITICK_TOKEN not configured" };
+  try {
+    const r = await fetch(`https://api.itick.org/stock/info?type=stock&region=MY&code=${symbol}`, {
+      headers: { accept: "application/json", token: ITICK_TOKEN },
+    });
+    const rawText = await r.text();
+    let json;
+    try {
+      json = JSON.parse(rawText);
+    } catch {
+      return { name: null, debug: `HTTP ${r.status}, non-JSON: ${rawText.slice(0, 150)}` };
+    }
+    if (json.code === 0 && json.data && json.data.n) {
+      return { name: json.data.n, debug: null };
+    }
+    return { name: null, debug: `HTTP ${r.status}, response: ${JSON.stringify(json).slice(0, 200)}` };
+  } catch (e) {
+    return { name: null, debug: `Request failed: ${e.message}` };
+  }
 }
 
 async function fetchFxRate() {
@@ -87,4 +109,4 @@ async function fetchFxRate() {
   }
 }
 
-module.exports = { fetchUsQuotes, fetchKlseQuotes, fetchFxRate };
+module.exports = { fetchUsQuotes, fetchKlseQuotes, fetchFxRate, fetchKlseName };
