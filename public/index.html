@@ -117,6 +117,13 @@
     <p class="faint" style="font-size:0.75rem; margin-top:12px;">
       US prices come from Twelve Data, KLSE prices from iTick. If either shows an error in the status line below the totals, check the browser console (right-click → Inspect → Console) for the raw API response.
     </p>
+    <label style="display:flex; align-items:center; gap:12px; font-size:0.9rem; margin-top:16px; padding-top:16px; border-top:1px solid #232838;">
+      Total Fund Capital (MYR)
+      <input type="number" step="0.01" id="totalCapitalInput" value="0" onchange="updateTotalCapital(this.value)" />
+    </label>
+    <p class="faint" style="font-size:0.7rem; margin-top:6px;">
+      All the money available to this fund, including what's already invested. Cash below is this minus the cost of current holdings.
+    </p>
   </div>
 
   <div class="cards">
@@ -131,6 +138,10 @@
     <div class="card">
       <div class="card-label">Return</div>
       <div class="card-value" id="totalReturn">0.00%</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Cash / Trading Limit</div>
+      <div class="card-value" id="cashBalance">RM 0.00</div>
     </div>
   </div>
 
@@ -208,6 +219,7 @@ const seedHoldings = [
   { id: 5, exchange: "US", symbol: "NVDA", name: "NVIDIA Corp.", qty: 25, avgCost: 128.40, price: 141.90, currency: "USD" },
 ];
 let holdings = [];
+let totalCapital = 0;
 let editingId = null;
 let nextId = 1;
 let saveTimer = null;
@@ -304,6 +316,14 @@ function render() {
   const retEl = document.getElementById('totalReturn');
   retEl.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%';
   retEl.style.color = totalGainPct >= 0 ? '#6FCF97' : '#EB5757';
+
+  const cashEl = document.getElementById('cashBalance');
+  if (cashEl) {
+    const cash = totalCapital - totalCost;
+    cashEl.textContent = 'RM ' + fmt(cash);
+    cashEl.style.color = cash < 0 ? '#EB5757' : '#F4F2ED';
+  }
+
   renderInvestors();
 
   // Ticker
@@ -531,9 +551,33 @@ function toggleAdminPwVisibility() {
   }
 }
 
+async function loadTotalCapital() {
+  try {
+    const res = await fetch('/api/fund-capital', { headers: authHeaders() });
+    const data = await res.json();
+    totalCapital = data.totalCapital || 0;
+  } catch (e) {
+    console.error('Could not load fund capital:', e);
+    totalCapital = 0;
+  }
+  const input = document.getElementById('totalCapitalInput');
+  if (input) input.value = totalCapital;
+}
+
+function updateTotalCapital(value) {
+  totalCapital = parseFloat(value) || 0;
+  fetch('/api/fund-capital', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ totalCapital }),
+  }).catch(e => console.error('Could not save fund capital:', e));
+  render();
+}
+
 async function init() {
   await loadHoldings();
   await loadInvestors();
+  await loadTotalCapital();
   render();
   refreshPrices();
   setInterval(refreshPrices, 30000);
