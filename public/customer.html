@@ -123,11 +123,13 @@ function renderSummary(data) {
   const app = document.getElementById('app');
   const gainCls = data.gain >= 0 ? 'up' : 'down';
   const sign = data.gain >= 0 ? '+' : '';
+  const todayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   app.innerHTML = `
     <button class="logout-btn" onclick="logout()">Sign out</button>
     <div class="eyebrow">Investment Summary</div>
     <h1>Welcome, ${data.name}</h1>
+    <div class="faint mono" style="font-size:0.8rem; margin-top:-24px; margin-bottom:24px;">${todayStr}</div>
 
     <div class="hero">
       <div class="hero-label">Current Value</div>

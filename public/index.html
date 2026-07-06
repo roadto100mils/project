@@ -175,7 +175,7 @@
     <div class="eyebrow">History</div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
       <h1 style="font-size:1.4rem; margin:0;">Closed Positions</h1>
-      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearHistory()">Clear History</button>
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearHistory()">Clear All</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -188,6 +188,7 @@
             <th>Last Added</th>
             <th>Closed Date</th>
             <th class="num">Realized P&amp;L</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="historyBody"></tbody>
@@ -539,11 +540,22 @@ function clearHistory() {
   render();
 }
 
+function deleteHistoryEntry(id) {
+  const entry = closedPositions.find(p => p.id === id);
+  if (!entry) return;
+  const confirmed = confirm(`Delete this record (${entry.symbol}, closed ${entry.closedDate})? This removes its realized P&L from the Return calculation and cannot be undone.`);
+  if (!confirmed) return;
+  closedPositions = closedPositions.filter(p => p.id !== id);
+  saveClosedPositions();
+  renderHistory();
+  render();
+}
+
 function renderHistory() {
   const body = document.getElementById('historyBody');
   if (!body) return;
   if (closedPositions.length === 0) {
-    body.innerHTML = '<tr><td colspan="7" class="faint" style="padding:16px;">No closed positions yet.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="faint" style="padding:16px;">No closed positions yet.</td></tr>';
     return;
   }
   const sorted = [...closedPositions].sort((a, b) => (b.closedDate || '').localeCompare(a.closedDate || ''));
@@ -558,6 +570,7 @@ function renderHistory() {
       <td class="mono" style="font-size:0.8rem;">${p.lastAddedDate || '—'}</td>
       <td class="mono" style="font-size:0.8rem;">${p.closedDate || '—'}</td>
       <td class="num mono ${pnlCls}">${p.realizedPnL >= 0 ? '+' : ''}RM ${fmt(p.realizedPnL)}</td>
+      <td class="row-actions"><button class="del" onclick="deleteHistoryEntry(${p.id})">✕</button></td>
     </tr>`;
   }).join('');
 }
