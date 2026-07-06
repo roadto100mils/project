@@ -1,16 +1,17 @@
 // Shared helpers for fetching live prices, used by both api/prices.js (admin dashboard)
-// and api/customer-view.js (customer-facing summary page).
+// and api/customer-login.js (customer-facing summary page).
 
 const TWELVE_DATA_KEY = process.env.TWELVE_DATA_KEY;
 const ITICK_TOKEN = process.env.ITICK_TOKEN;
 
 async function fetchUsQuotes(symbols) {
   const result = {};
+  const names = {};
   const errors = [];
-  if (!symbols.length) return { result, errors };
+  if (!symbols.length) return { result, names, errors };
   if (!TWELVE_DATA_KEY) {
     errors.push("TWELVE_DATA_KEY not configured on server");
-    return { result, errors };
+    return { result, names, errors };
   }
   try {
     const r = await fetch(
@@ -21,24 +22,27 @@ async function fetchUsQuotes(symbols) {
       errors.push(`US: ${data.message || "unknown error"}`);
     } else if (symbols.length === 1) {
       if (data.close) result[symbols[0]] = parseFloat(data.close);
+      if (data.name) names[symbols[0]] = data.name;
     } else {
       for (const sym of symbols) {
         if (data[sym] && data[sym].close) result[sym] = parseFloat(data[sym].close);
+        if (data[sym] && data[sym].name) names[sym] = data[sym].name;
       }
     }
   } catch (e) {
     errors.push(`US fetch failed: ${e.message}`);
   }
-  return { result, errors };
+  return { result, names, errors };
 }
 
 async function fetchKlseQuotes(symbols) {
   const result = {};
+  const names = {};
   const errors = [];
-  if (!symbols.length) return { result, errors };
+  if (!symbols.length) return { result, names, errors };
   if (!ITICK_TOKEN) {
     errors.push("ITICK_TOKEN not configured on server");
-    return { result, errors };
+    return { result, names, errors };
   }
   await Promise.all(
     symbols.map(async (sym) => {
@@ -56,6 +60,7 @@ async function fetchKlseQuotes(symbols) {
         }
         if (json.code === 0 && json.data && json.data.ld) {
           result[sym] = parseFloat(json.data.ld);
+          if (json.data.n) names[sym] = json.data.n;
         } else {
           errors.push(`KLSE ${sym}: HTTP ${r.status}, response: ${JSON.stringify(json).slice(0, 150)}`);
         }
@@ -64,7 +69,7 @@ async function fetchKlseQuotes(symbols) {
       }
     })
   );
-  return { result, errors };
+  return { result, names, errors };
 }
 
 async function fetchFxRate() {

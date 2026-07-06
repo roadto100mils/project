@@ -144,6 +144,7 @@
       <div class="card-value" id="cashBalance">RM 0.00</div>
     </div>
   </div>
+  <div class="mono" id="cashWarning" style="font-size:0.75rem; margin-bottom:16px; color:#EB5757;"></div>
 
   <div class="faint mono" style="font-size:0.75rem; margin-bottom:4px;" id="lastUpdated"></div>
   <div class="mono" style="font-size:0.75rem; margin-bottom:16px;" id="dataStatus"></div>
@@ -168,6 +169,27 @@
 
   <button class="btn btn-ghost" onclick="addHolding()">+ Add holding</button>
   <span class="faint mono" id="saveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
+
+  <div style="margin-top:56px;">
+    <div class="eyebrow">History</div>
+    <h1 style="font-size:1.4rem;">Closed Positions</h1>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th class="num">Qty</th>
+            <th>Open Date</th>
+            <th>Last Added</th>
+            <th>Closed Date</th>
+            <th class="num">Realized P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
 
   <div style="margin-top:56px;">
     <div class="eyebrow">Customers</div>
@@ -221,6 +243,8 @@ const seedHoldings = [
 let holdings = [];
 let totalCapital = 0;
 let editingId = null;
+let closingId = null;
+let closedPositions = [];
 let nextId = 1;
 let saveTimer = null;
 
@@ -318,10 +342,18 @@ function render() {
   retEl.style.color = totalGainPct >= 0 ? '#6FCF97' : '#EB5757';
 
   const cashEl = document.getElementById('cashBalance');
+  const cashWarnEl = document.getElementById('cashWarning');
   if (cashEl) {
     const cash = totalCapital - totalCost;
-    cashEl.textContent = 'RM ' + fmt(cash);
-    cashEl.style.color = cash < 0 ? '#EB5757' : '#F4F2ED';
+    if (cash < 0) {
+      cashEl.textContent = 'RM 0.00';
+      cashEl.style.color = '#EB5757';
+      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds total capital by RM ${fmt(Math.abs(cash))} — increase Total Fund Capital in Settings or reduce holdings.`;
+    } else {
+      cashEl.textContent = 'RM ' + fmt(cash);
+      cashEl.style.color = '#F4F2ED';
+      if (cashWarnEl) cashWarnEl.textContent = '';
+    }
   }
 
   renderInvestors();
@@ -341,6 +373,22 @@ function render() {
   body.innerHTML = rows.map(r => {
     const sym = r.currency === 'USD' ? '$' : 'RM';
     const gainCls = r.gain >= 0 ? 'up' : 'down';
+    if (closingId === r.id) {
+      return `<tr>
+        <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+        <td class="muted">${r.name}</td>
+        <td class="num mono">${new Intl.NumberFormat('en-MY').format(r.qty)}</td>
+        <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
+        <td class="num" colspan="1">
+          <input class="edit-input" type="number" id="exitPriceInput_${r.id}" placeholder="Exit price" value="${r.price}" />
+        </td>
+        <td class="num mono" colspan="2">Realized P&amp;L calculated on confirm</td>
+        <td class="row-actions">
+          <button onclick="confirmClosePosition(${r.id})">Confirm</button>
+          <button class="del" onclick="cancelClosePosition()">Cancel</button>
+        </td>
+      </tr>`;
+    }
     if (editingId === r.id) {
       return `<tr>
         <td><input class="edit-input" value="${r.symbol}" onchange="updateField(${r.id},'symbol',this.value)" /></td>
@@ -361,7 +409,7 @@ function render() {
       <td class="num mono">${sym}${fmt(r.price)}</td>
       <td class="num mono">RM ${fmt(r.valueMYR)}</td>
       <td class="num mono ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
-      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button onclick="startClosePosition(${r.id})">Close</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
     </tr>`;
   }).join('');
 
@@ -372,17 +420,122 @@ function updateField(id, field, value) {
   holdings = holdings.map(h => {
     if (h.id !== id) return h;
     const numeric = ['qty', 'avgCost', 'price'].includes(field);
-    return Object.assign({}, h, { [field]: numeric ? (parseFloat(value) || 0) : value });
+    const updated = Object.assign({}, h, { [field]: numeric ? (parseFloat(value) || 0) : value });
+    if (field === 'qty' || field === 'avgCost') updated.lastAddedDate = new Date().toISOString().slice(0, 10);
+    return updated;
   });
   saveHoldings();
   render();
+  if (field === 'symbol' || field === 'exchange') fetchNameForSymbol(id);
 }
-function editRow(id) { editingId = id; render(); }
+
+async function fetchNameForSymbol(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h || !h.symbol) return;
+  try {
+    const url = h.exchange === 'US'
+      ? `/api/prices?us=${encodeURIComponent(h.symbol)}`
+      : `/api/prices?klse=${encodeURIComponent(h.symbol)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const name = h.exchange === 'US' ? data.usNames?.[h.symbol] : data.klseNames?.[h.symbol];
+    if (name) {
+      holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { name }) : x);
+      saveHoldings();
+      render();
+    }
+  } catch (e) {
+    console.error('Could not auto-fetch name:', e);
+  }
+}
+
+function startClosePosition(id) { closingId = id; editingId = null; render(); }
+function cancelClosePosition() { closingId = null; render(); }
+
+async function loadClosedPositions() {
+  try {
+    const res = await fetch('/api/closed-positions', { headers: authHeaders() });
+    const data = await res.json();
+    closedPositions = data.closedPositions || [];
+  } catch (e) {
+    console.error('Could not load history:', e);
+    closedPositions = [];
+  }
+}
+
+function saveClosedPositions() {
+  fetch('/api/closed-positions', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ closedPositions }),
+  }).catch(e => console.error('Could not save history:', e));
+}
+
+function confirmClosePosition(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h) return;
+  const input = document.getElementById(`exitPriceInput_${id}`);
+  const exitPrice = parseFloat(input.value) || 0;
+  const fxRateVal = fxRate();
+
+  const entryCostMYR = toMYR(h.avgCost * h.qty, h.currency);
+  const exitValueMYR = toMYR(exitPrice * h.qty, h.currency);
+  const realizedPnL = exitValueMYR - entryCostMYR;
+
+  closedPositions.push({
+    id: Date.now(),
+    exchange: h.exchange,
+    symbol: h.symbol,
+    name: h.name,
+    qty: h.qty,
+    currency: h.currency,
+    avgCost: h.avgCost,
+    exitPrice,
+    openDate: h.openDate || null,
+    lastAddedDate: h.lastAddedDate || null,
+    closedDate: new Date().toISOString().slice(0, 10),
+    realizedPnL,
+  });
+
+  holdings = holdings.filter(x => x.id !== id);
+  closingId = null;
+  saveHoldings();
+  saveClosedPositions();
+  render();
+  renderHistory();
+}
+
+function renderHistory() {
+  const body = document.getElementById('historyBody');
+  if (!body) return;
+  if (closedPositions.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" class="faint" style="padding:16px;">No closed positions yet.</td></tr>';
+    return;
+  }
+  const sorted = [...closedPositions].sort((a, b) => (b.closedDate || '').localeCompare(a.closedDate || ''));
+  body.innerHTML = sorted.map(p => {
+    const pnlCls = p.realizedPnL >= 0 ? 'up' : 'down';
+    const sym = p.currency === 'USD' ? '$' : 'RM';
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${p.exchange}</span>${p.symbol}</td>
+      <td class="muted">${p.name || ''}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(p.qty)}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.openDate || '—'}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.lastAddedDate || '—'}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.closedDate || '—'}</td>
+      <td class="num mono ${pnlCls}">${p.realizedPnL >= 0 ? '+' : ''}RM ${fmt(p.realizedPnL)}</td>
+    </tr>`;
+  }).join('');
+}
+
+
+function editRow(id) { editingId = id; closingId = null; render(); }
 function doneEdit() { editingId = null; render(); }
 function removeHolding(id) { holdings = holdings.filter(h => h.id !== id); saveHoldings(); render(); }
 function addHolding() {
   const id = nextId++;
-  holdings.push({ id, exchange: 'KLSE', symbol: 'NEW', name: 'New Holding', qty: 100, avgCost: 1, price: 1, currency: 'MYR' });
+  const today = new Date().toISOString().slice(0, 10);
+  holdings.push({ id, exchange: 'KLSE', symbol: '', name: '', qty: 100, avgCost: 1, price: 1, currency: 'MYR', openDate: today, lastAddedDate: today });
   editingId = id;
   saveHoldings();
   render();
@@ -391,7 +544,7 @@ async function refreshPrices() {
   const usSymbols = holdings.filter(h => h.exchange === 'US').map(h => h.symbol);
   const klseSymbols = holdings.filter(h => h.exchange === 'KLSE').map(h => h.symbol);
 
-  let data = { us: {}, klse: {}, fx: null, errors: [] };
+  let data = { us: {}, usNames: {}, klse: {}, klseNames: {}, fx: null, errors: [] };
   try {
     const url = `/api/prices?us=${encodeURIComponent(usSymbols.join(','))}&klse=${encodeURIComponent(klseSymbols.join(','))}`;
     const res = await fetch(url);
@@ -406,17 +559,15 @@ async function refreshPrices() {
   let klseLiveCount = 0;
   holdings = holdings.map(h => {
     if (h.exchange === 'KLSE') {
-      if (data.klse[h.symbol] !== undefined) {
-        klseLiveCount++;
-        return Object.assign({}, h, { price: data.klse[h.symbol] });
-      }
-      return h; // keep last known price on failure, no fake movement
+      const updated = Object.assign({}, h);
+      if (data.klse[h.symbol] !== undefined) { klseLiveCount++; updated.price = data.klse[h.symbol]; }
+      if (!h.name && data.klseNames && data.klseNames[h.symbol]) updated.name = data.klseNames[h.symbol];
+      return updated;
     }
-    if (data.us[h.symbol] !== undefined) {
-      usLiveCount++;
-      return Object.assign({}, h, { price: data.us[h.symbol] });
-    }
-    return h;
+    const updated = Object.assign({}, h);
+    if (data.us[h.symbol] !== undefined) { usLiveCount++; updated.price = data.us[h.symbol]; }
+    if (!h.name && data.usNames && data.usNames[h.symbol]) updated.name = data.usNames[h.symbol];
+    return updated;
   });
 
   if (data.fx) {
@@ -578,7 +729,9 @@ async function init() {
   await loadHoldings();
   await loadInvestors();
   await loadTotalCapital();
+  await loadClosedPositions();
   render();
+  renderHistory();
   refreshPrices();
   setInterval(refreshPrices, 30000);
 }
