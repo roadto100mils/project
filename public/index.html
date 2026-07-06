@@ -147,6 +147,12 @@
   </div>
   <div class="mono" id="cashWarning" style="font-size:0.75rem; margin-bottom:16px; color:#EB5757;"></div>
 
+  <div style="margin-bottom:32px;">
+    <div class="eyebrow">Trend</div>
+    <h1 style="font-size:1.2rem; margin-bottom:12px;">Total Fund Equity Over Time</h1>
+    <div id="trendChart" style="background:#12161F; border:1px solid #232838; border-radius:12px; padding:16px;"></div>
+  </div>
+
   <div class="faint mono" style="font-size:0.75rem; margin-bottom:4px;" id="lastUpdated"></div>
   <div class="mono" style="font-size:0.75rem; margin-bottom:16px;" id="dataStatus"></div>
 
@@ -775,6 +781,79 @@ function updateTotalCapital(value) {
   render();
 }
 
+let snapshotHistory = [];
+
+async function loadSnapshots() {
+  try {
+    const res = await fetch('/api/snapshot', { headers: authHeaders() });
+    const data = await res.json();
+    snapshotHistory = data.snapshots || [];
+  } catch (e) {
+    console.error('Could not load snapshots:', e);
+    snapshotHistory = [];
+  }
+}
+
+function recordTodaySnapshot() {
+  const today = new Date().toISOString().slice(0, 10);
+  const totalValue = window.currentTotalValue || 0;
+  const totalCost = window.currentTotalCost || 0;
+  const realizedPnL = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const overallGain = (totalValue - totalCost) + realizedPnL;
+  const totalFundEquity = totalCapital + overallGain;
+  const cash = totalCapital + realizedPnL - totalCost;
+
+  fetch('/api/snapshot', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ date: today, totalFundEquity, totalValue, cash }),
+  }).then(() => {
+    const withoutToday = snapshotHistory.filter(s => s.date !== today);
+    snapshotHistory = [...withoutToday, { date: today, totalFundEquity, totalValue, cash }].sort((a, b) => a.date.localeCompare(b.date));
+    renderTrendChart();
+  }).catch(e => console.error('Could not save snapshot:', e));
+}
+
+function renderTrendChart() {
+  const container = document.getElementById('trendChart');
+  if (!container) return;
+  if (snapshotHistory.length < 2) {
+    container.innerHTML = '<div class="faint" style="text-align:center; padding:24px; font-size:0.85rem;">Not enough data yet — check back after a few days of activity.</div>';
+    return;
+  }
+
+  const width = 900, height = 220, padding = 40;
+  const values = snapshotHistory.map(s => s.totalFundEquity);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+
+  const points = snapshotHistory.map((s, i) => {
+    const x = padding + (i / (snapshotHistory.length - 1)) * (width - padding * 2);
+    const y = height - padding - ((s.totalFundEquity - minV) / range) * (height - padding * 2);
+    return { x, y, date: s.date, value: s.totalFundEquity };
+  });
+
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  const firstDate = snapshotHistory[0].date;
+  const lastDate = snapshotHistory[snapshotHistory.length - 1].date;
+  const trendUp = values[values.length - 1] >= values[0];
+  const lineColor = trendUp ? '#6FCF97' : '#EB5757';
+
+  const circles = points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${lineColor}" />`).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <polyline points="${linePoints}" fill="none" stroke="${lineColor}" stroke-width="2" />
+      ${circles}
+      <text x="${padding}" y="${height - 10}" fill="#5C6270" font-size="11" font-family="'IBM Plex Mono', monospace">${firstDate}</text>
+      <text x="${width - padding}" y="${height - 10}" fill="#5C6270" font-size="11" font-family="'IBM Plex Mono', monospace" text-anchor="end">${lastDate}</text>
+      <text x="${padding}" y="16" fill="#8A8F9E" font-size="11" font-family="'IBM Plex Mono', monospace">RM ${fmt(maxV)}</text>
+      <text x="${padding}" y="${height - padding + 14}" fill="#8A8F9E" font-size="11" font-family="'IBM Plex Mono', monospace">RM ${fmt(minV)}</text>
+    </svg>
+  `;
+}
+
 async function init() {
   const dateEl = document.getElementById('todayDate');
   if (dateEl) {
@@ -784,10 +863,13 @@ async function init() {
   await loadInvestors();
   await loadTotalCapital();
   await loadClosedPositions();
+  await loadSnapshots();
   render();
   renderHistory();
+  renderTrendChart();
   refreshPrices();
   setInterval(refreshPrices, 30000);
+  setTimeout(recordTodaySnapshot, 3000); // wait for live prices to settle before snapshotting
 }
 
 function authHeaders() {
