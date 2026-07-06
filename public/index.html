@@ -241,6 +241,7 @@ const seedHoldings = [
   { id: 5, exchange: "US", symbol: "NVDA", name: "NVIDIA Corp.", qty: 25, avgCost: 128.40, price: 141.90, currency: "USD" },
 ];
 let holdings = [];
+let holdingsLoaded = false;
 let totalCapital = 0;
 let editingId = null;
 let closingId = null;
@@ -266,6 +267,7 @@ async function loadHoldings() {
     holdings = seedHoldings;
   }
   nextId = Math.max(0, ...holdings.map(h => h.id)) + 1;
+  holdingsLoaded = true;
 }
 
 async function saveHoldingsNow() {
@@ -324,7 +326,7 @@ function computeRows() {
 }
 
 function render() {
-  if (holdings.length === 0) {
+  if (!holdingsLoaded) {
     const body = document.getElementById('holdingsBody');
     if (body) body.innerHTML = '<tr><td colspan="8" class="faint" style="padding:24px 16px;">Loading your saved holdings…</td></tr>';
     return;
@@ -373,7 +375,9 @@ function render() {
 
   // Table
   const body = document.getElementById('holdingsBody');
-  body.innerHTML = rows.map(r => {
+  body.innerHTML = rows.length === 0
+    ? '<tr><td colspan="8" class="faint" style="padding:24px 16px;">No open positions. Click "+ Add holding" to add one.</td></tr>'
+    : rows.map(r => {
     const sym = r.currency === 'USD' ? '$' : 'RM';
     const gainCls = r.gain >= 0 ? 'up' : 'down';
     if (closingId === r.id) {
