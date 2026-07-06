@@ -252,7 +252,10 @@ async function loadHoldings() {
   try {
     const res = await fetch('/api/holdings', { headers: authHeaders() });
     const data = await res.json();
-    if (data.holdings && data.holdings.length) {
+    if (data.holdings !== null && data.holdings !== undefined) {
+      // Respect whatever was saved, including an intentionally empty array
+      // (e.g. after closing all positions) — only fall back to sample data
+      // when nothing has ever been saved (Redis returns null).
       holdings = data.holdings;
     } else {
       holdings = seedHoldings;
@@ -391,7 +394,13 @@ function render() {
     }
     if (editingId === r.id) {
       return `<tr>
-        <td><input class="edit-input" value="${r.symbol}" onchange="updateField(${r.id},'symbol',this.value)" /></td>
+        <td>
+          <select class="edit-input" style="width:64px; margin-bottom:4px;" onchange="updateField(${r.id},'exchange',this.value)">
+            <option value="KLSE" ${r.exchange === 'KLSE' ? 'selected' : ''}>KLSE</option>
+            <option value="US" ${r.exchange === 'US' ? 'selected' : ''}>US</option>
+          </select>
+          <input class="edit-input" style="width:64px;" value="${r.symbol}" onchange="updateField(${r.id},'symbol',this.value)" />
+        </td>
         <td><input class="edit-input wide" value="${r.name}" onchange="updateField(${r.id},'name',this.value)" /></td>
         <td class="num"><input class="edit-input" type="number" value="${r.qty}" onchange="updateField(${r.id},'qty',this.value)" /></td>
         <td class="num"><input class="edit-input" type="number" value="${r.avgCost}" onchange="updateField(${r.id},'avgCost',this.value)" /></td>
@@ -421,6 +430,7 @@ function updateField(id, field, value) {
     if (h.id !== id) return h;
     const numeric = ['qty', 'avgCost', 'price'].includes(field);
     const updated = Object.assign({}, h, { [field]: numeric ? (parseFloat(value) || 0) : value });
+    if (field === 'exchange') updated.currency = value === 'US' ? 'USD' : 'MYR';
     if (field === 'qty' || field === 'avgCost') updated.lastAddedDate = new Date().toISOString().slice(0, 10);
     return updated;
   });
