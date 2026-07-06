@@ -136,7 +136,7 @@
       <div class="card-value" id="totalGain">RM 0.00</div>
     </div>
     <div class="card">
-      <div class="card-label">Return</div>
+      <div class="card-label">Return (on total capital)</div>
       <div class="card-value" id="totalReturn">0.00%</div>
     </div>
     <div class="card">
@@ -172,7 +172,10 @@
 
   <div style="margin-top:56px;">
     <div class="eyebrow">History</div>
-    <h1 style="font-size:1.4rem;">Closed Positions</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <h1 style="font-size:1.4rem; margin:0;">Closed Positions</h1>
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearHistory()">Clear History</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -334,8 +337,11 @@ function render() {
   const rows = computeRows();
   const totalValue = rows.reduce((s, r) => s + r.valueMYR, 0);
   const totalCost = rows.reduce((s, r) => s + r.costMYR, 0);
-  const totalGain = totalValue - totalCost;
-  const totalGainPct = totalCost ? (totalGain / totalCost) * 100 : 0;
+  const totalGain = totalValue - totalCost; // unrealized gain on currently open positions only
+
+  const totalRealizedPnL = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const overallGain = totalGain + totalRealizedPnL;
+  const overallReturnPct = totalCapital ? (overallGain / totalCapital) * 100 : 0;
 
   document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
   window.currentTotalValue = totalValue;
@@ -343,8 +349,9 @@ function render() {
   gainEl.textContent = (totalGain >= 0 ? '+' : '-') + 'RM ' + fmt(Math.abs(totalGain));
   gainEl.style.color = totalGain >= 0 ? '#6FCF97' : '#EB5757';
   const retEl = document.getElementById('totalReturn');
-  retEl.textContent = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%';
-  retEl.style.color = totalGainPct >= 0 ? '#6FCF97' : '#EB5757';
+  retEl.textContent = (overallReturnPct >= 0 ? '+' : '') + overallReturnPct.toFixed(2) + '%';
+  retEl.style.color = overallReturnPct >= 0 ? '#6FCF97' : '#EB5757';
+  retEl.title = `Based on total fund capital (RM ${fmt(totalCapital)}), including realized P&L from closed positions (RM ${fmt(totalRealizedPnL)}) and unrealized P&L on open positions (RM ${fmt(totalGain)}).`;
 
   const cashEl = document.getElementById('cashBalance');
   const cashWarnEl = document.getElementById('cashWarning');
@@ -518,6 +525,16 @@ function confirmClosePosition(id) {
   saveClosedPositions();
   render();
   renderHistory();
+}
+
+function clearHistory() {
+  if (closedPositions.length === 0) return;
+  const confirmed = confirm(`Clear all ${closedPositions.length} closed position record(s)? This also removes them from the Return calculation and cannot be undone.`);
+  if (!confirmed) return;
+  closedPositions = [];
+  saveClosedPositions();
+  renderHistory();
+  render();
 }
 
 function renderHistory() {
