@@ -69,7 +69,9 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
   const years = yearsSince(investor.joinDate);
   const guaranteedValue = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
 
-  const currentValue = Math.max(actualValue, guaranteedValue);
+  // Current Value reflects actual fund performance only. The guarantee is shown
+  // separately below as a target/commitment, not blended into this number.
+  const currentValue = actualValue;
   const gain = currentValue - contributed;
   const gainPct = contributed ? (gain / contributed) * 100 : 0;
   const sharePct = totalFundValue > 0 ? (currentValue / totalFundValue) * 100 : 0;
@@ -77,6 +79,7 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
   const symbols = [...new Set(holdingsList.map((h) => h.symbol))];
 
   // Next guarantee milestone: the upcoming annual target that hasn't been reached yet.
+  // Shown purely as an informational commitment — separate from Current Value above.
   let investmentDate = null;
   let guaranteedTargetAmount = null;
   let guaranteedPayoutDate = null;
@@ -97,7 +100,7 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
     currentValue,
     gain,
     gainPct,
-    usingGuarantee: guaranteedValue > actualValue,
+    belowGuarantee: guaranteedValue > actualValue,
     investmentDate,
     guaranteedTargetAmount,
     guaranteedPayoutDate,
