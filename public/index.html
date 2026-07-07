@@ -444,10 +444,14 @@ function render() {
       return `<tr>
         <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
         <td class="muted">${r.name}</td>
-        <td class="num"><input class="edit-input" type="number" id="exitQtyInput_${r.id}" placeholder="Qty to sell" value="${r.qty}" max="${r.qty}" /></td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Qty to sell</div>
+          <input class="edit-input" type="number" id="exitQtyInput_${r.id}" value="${r.qty}" max="${r.qty}" />
+        </td>
         <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
         <td class="num" colspan="1">
-          <input class="edit-input" type="number" id="exitPriceInput_${r.id}" placeholder="Exit price" value="${r.price}" />
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Exit price</div>
+          <input class="edit-input" type="number" id="exitPriceInput_${r.id}" value="${r.price}" />
         </td>
         <td class="num mono" colspan="2">Realized P&amp;L calculated on confirm</td>
         <td class="row-actions">
@@ -461,10 +465,23 @@ function render() {
       return `<tr>
         <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
         <td class="muted">${r.name}</td>
-        <td class="num"><input class="edit-input" type="number" id="addQtyInput_${r.id}" placeholder="Add qty" /></td>
-        <td class="num"><input class="edit-input" type="number" id="addPriceInput_${r.id}" placeholder="Add price" value="${r.price}" /></td>
-        <td class="num"><input class="edit-input" type="date" id="addDateInput_${r.id}" value="${today}" /></td>
-        <td class="num mono" colspan="2">New avg cost calculated on confirm</td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Add qty</div>
+          <input class="edit-input" type="number" id="addQtyInput_${r.id}" />
+        </td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Current: ${sym}${fmt(r.avgCost)}</div>
+          <span class="faint" style="font-size:0.75rem;">avg cost</span>
+        </td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Buy price</div>
+          <input class="edit-input" type="number" id="addPriceInput_${r.id}" value="${r.price}" />
+        </td>
+        <td class="num" colspan="2">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Date</div>
+          <input class="edit-input" type="date" id="addDateInput_${r.id}" value="${today}" />
+          <span class="faint" style="font-size:0.7rem; margin-left:8px;">New avg cost calculated on confirm</span>
+        </td>
         <td class="row-actions">
           <button onclick="confirmAddPosition(${r.id})">Confirm</button>
           <button class="del" onclick="cancelAddPosition()">Cancel</button>
