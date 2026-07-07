@@ -221,6 +221,30 @@
   </div>
 
   <div style="margin-top:56px;">
+    <div class="eyebrow">History</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+      <h1 style="font-size:1.4rem; margin:0;">Transaction History</h1>
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearTransactions()">Clear All</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th class="num">Qty</th>
+            <th class="num">Price</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="transactionsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:56px;">
     <div class="eyebrow">Customers</div>
     <h1 style="font-size:1.4rem;">Investor Shares</h1>
     <p class="faint" style="font-size:0.8rem; margin-top:-8px; margin-bottom:20px;">
@@ -274,7 +298,9 @@ let holdingsLoaded = false;
 let totalCapital = 0;
 let editingId = null;
 let closingId = null;
+let addingId = null;
 let closedPositions = [];
+let transactions = [];
 let nextId = 1;
 let saveTimer = null;
 
@@ -418,7 +444,7 @@ function render() {
       return `<tr>
         <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
         <td class="muted">${r.name}</td>
-        <td class="num mono">${new Intl.NumberFormat('en-MY').format(r.qty)}</td>
+        <td class="num"><input class="edit-input" type="number" id="exitQtyInput_${r.id}" placeholder="Qty to sell" value="${r.qty}" max="${r.qty}" /></td>
         <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
         <td class="num" colspan="1">
           <input class="edit-input" type="number" id="exitPriceInput_${r.id}" placeholder="Exit price" value="${r.price}" />
@@ -427,6 +453,21 @@ function render() {
         <td class="row-actions">
           <button onclick="confirmClosePosition(${r.id})">Confirm</button>
           <button class="del" onclick="cancelClosePosition()">Cancel</button>
+        </td>
+      </tr>`;
+    }
+    if (addingId === r.id) {
+      const today = new Date().toISOString().slice(0, 10);
+      return `<tr>
+        <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+        <td class="muted">${r.name}</td>
+        <td class="num"><input class="edit-input" type="number" id="addQtyInput_${r.id}" placeholder="Add qty" /></td>
+        <td class="num"><input class="edit-input" type="number" id="addPriceInput_${r.id}" placeholder="Add price" value="${r.price}" /></td>
+        <td class="num"><input class="edit-input" type="date" id="addDateInput_${r.id}" value="${today}" /></td>
+        <td class="num mono" colspan="2">New avg cost calculated on confirm</td>
+        <td class="row-actions">
+          <button onclick="confirmAddPosition(${r.id})">Confirm</button>
+          <button class="del" onclick="cancelAddPosition()">Cancel</button>
         </td>
       </tr>`;
     }
@@ -456,7 +497,7 @@ function render() {
       <td class="num mono">${sym}${fmt(r.price)}</td>
       <td class="num mono">RM ${fmt(r.valueMYR)}</td>
       <td class="num mono ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
-      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button onclick="startClosePosition(${r.id})">Close</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button onclick="startAddPosition(${r.id})">Add</button><button onclick="startClosePosition(${r.id})">Close</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
     </tr>`;
   }).join('');
 
@@ -498,8 +539,10 @@ async function fetchNameForSymbol(id) {
   }
 }
 
-function startClosePosition(id) { closingId = id; editingId = null; render(); }
+function startClosePosition(id) { closingId = id; editingId = null; addingId = null; render(); }
 function cancelClosePosition() { closingId = null; render(); }
+function startAddPosition(id) { addingId = id; editingId = null; closingId = null; render(); }
+function cancelAddPosition() { addingId = null; render(); }
 
 async function loadClosedPositions() {
   try {
@@ -520,38 +563,112 @@ function saveClosedPositions() {
   }).catch(e => console.error('Could not save history:', e));
 }
 
+async function loadTransactions() {
+  try {
+    const res = await fetch('/api/transactions', { headers: authHeaders() });
+    const data = await res.json();
+    transactions = data.transactions || [];
+  } catch (e) {
+    console.error('Could not load transactions:', e);
+    transactions = [];
+  }
+}
+
+function saveTransactions() {
+  fetch('/api/transactions', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ transactions }),
+  }).catch(e => console.error('Could not save transactions:', e));
+}
+
+function logTransaction(type, h, qty, price, date) {
+  transactions.push({
+    id: Date.now() + Math.random(),
+    type, // 'buy' or 'sell'
+    exchange: h.exchange,
+    symbol: h.symbol,
+    name: h.name,
+    qty,
+    price,
+    currency: h.currency,
+    date: date || new Date().toISOString().slice(0, 10),
+  });
+  saveTransactions();
+}
+
+function confirmAddPosition(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h) return;
+  const qtyInput = document.getElementById(`addQtyInput_${id}`);
+  const priceInput = document.getElementById(`addPriceInput_${id}`);
+  const dateInput = document.getElementById(`addDateInput_${id}`);
+  const addQty = parseFloat(qtyInput.value) || 0;
+  const addPrice = parseFloat(priceInput.value) || 0;
+  const addDate = dateInput.value || new Date().toISOString().slice(0, 10);
+
+  if (addQty <= 0) { alert('Enter a quantity greater than 0.'); return; }
+
+  const newQty = h.qty + addQty;
+  const newAvgCost = ((h.qty * h.avgCost) + (addQty * addPrice)) / newQty;
+
+  holdings = holdings.map(x => x.id === id ? Object.assign({}, x, {
+    qty: newQty,
+    avgCost: newAvgCost,
+    lastAddedDate: addDate,
+  }) : x);
+
+  logTransaction('buy', h, addQty, addPrice, addDate);
+  addingId = null;
+  saveHoldings();
+  render();
+  renderTransactions();
+}
+
 function confirmClosePosition(id) {
   const h = holdings.find(x => x.id === id);
   if (!h) return;
-  const input = document.getElementById(`exitPriceInput_${id}`);
-  const exitPrice = parseFloat(input.value) || 0;
-  const fxRateVal = fxRate();
+  const priceInput = document.getElementById(`exitPriceInput_${id}`);
+  const qtyInput = document.getElementById(`exitQtyInput_${id}`);
+  const exitPrice = parseFloat(priceInput.value) || 0;
+  let exitQty = parseFloat(qtyInput.value) || 0;
+  if (exitQty <= 0) { alert('Enter a quantity greater than 0.'); return; }
+  if (exitQty > h.qty) exitQty = h.qty; // can't sell more than you hold
 
-  const entryCostMYR = toMYR(h.avgCost * h.qty, h.currency);
-  const exitValueMYR = toMYR(exitPrice * h.qty, h.currency);
+  const entryCostMYR = toMYR(h.avgCost * exitQty, h.currency);
+  const exitValueMYR = toMYR(exitPrice * exitQty, h.currency);
   const realizedPnL = exitValueMYR - entryCostMYR;
+  const closeDate = new Date().toISOString().slice(0, 10);
 
   closedPositions.push({
     id: Date.now(),
     exchange: h.exchange,
     symbol: h.symbol,
     name: h.name,
-    qty: h.qty,
+    qty: exitQty,
     currency: h.currency,
     avgCost: h.avgCost,
     exitPrice,
     openDate: h.openDate || null,
     lastAddedDate: h.lastAddedDate || null,
-    closedDate: new Date().toISOString().slice(0, 10),
+    closedDate: closeDate,
     realizedPnL,
   });
 
-  holdings = holdings.filter(x => x.id !== id);
+  logTransaction('sell', h, exitQty, exitPrice, closeDate);
+
+  if (exitQty >= h.qty) {
+    holdings = holdings.filter(x => x.id !== id);
+  } else {
+    holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { qty: x.qty - exitQty }) : x);
+  }
+
   closingId = null;
   saveHoldings();
   saveClosedPositions();
   render();
   renderHistory();
+  renderTransactions();
 }
 
 function clearHistory() {
@@ -599,14 +716,66 @@ function renderHistory() {
   }).join('');
 }
 
+function clearTransactions() {
+  if (transactions.length === 0) return;
+  const confirmed = confirm(`Clear all ${transactions.length} transaction record(s)? This cannot be undone.`);
+  if (!confirmed) return;
+  transactions = [];
+  saveTransactions();
+  renderTransactions();
+}
 
-function editRow(id) { editingId = id; closingId = null; render(); }
-function doneEdit() { editingId = null; render(); }
+function deleteTransaction(id) {
+  const entry = transactions.find(t => t.id === id);
+  if (!entry) return;
+  const confirmed = confirm(`Delete this transaction (${entry.type} ${entry.symbol}, ${entry.date})? This cannot be undone.`);
+  if (!confirmed) return;
+  transactions = transactions.filter(t => t.id !== id);
+  saveTransactions();
+  renderTransactions();
+}
+
+function renderTransactions() {
+  const body = document.getElementById('transactionsBody');
+  if (!body) return;
+  if (transactions.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" class="faint" style="padding:16px;">No transactions yet.</td></tr>';
+    return;
+  }
+  const sorted = [...transactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  body.innerHTML = sorted.map(t => {
+    const sym = t.currency === 'USD' ? '$' : 'RM';
+    const typeCls = t.type === 'buy' ? 'up' : 'down';
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${t.exchange}</span>${t.symbol}</td>
+      <td class="muted">${t.name || ''}</td>
+      <td class="mono ${typeCls}" style="text-transform:uppercase; font-size:0.8rem;">${t.type}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(t.qty)}</td>
+      <td class="num mono">${sym}${fmt(t.price)}</td>
+      <td class="mono" style="font-size:0.8rem;">${t.date}</td>
+      <td class="row-actions"><button class="del" onclick="deleteTransaction(${t.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function editRow(id) { editingId = id; closingId = null; addingId = null; render(); }
+function doneEdit() {
+  const h = holdings.find(x => x.id === editingId);
+  if (h && h.pendingInitialLog && h.symbol && h.qty > 0) {
+    logTransaction('buy', h, h.qty, h.avgCost, h.openDate);
+    holdings = holdings.map(x => x.id === h.id ? Object.assign({}, x, { pendingInitialLog: false }) : x);
+    saveHoldings();
+    renderTransactions();
+  }
+  editingId = null;
+  render();
+}
 function removeHolding(id) { holdings = holdings.filter(h => h.id !== id); saveHoldings(); render(); }
 function addHolding() {
   const id = nextId++;
   const today = new Date().toISOString().slice(0, 10);
-  holdings.push({ id, exchange: 'KLSE', symbol: '', name: '', qty: 100, avgCost: 1, price: 1, currency: 'MYR', openDate: today, lastAddedDate: today });
+  holdings.push({ id, exchange: 'KLSE', symbol: '', name: '', qty: 100, avgCost: 1, price: 1, currency: 'MYR', openDate: today, lastAddedDate: today, pendingInitialLog: true });
   editingId = id;
   saveHoldings();
   render();
@@ -881,9 +1050,11 @@ async function init() {
   await loadInvestors();
   await loadTotalCapital();
   await loadClosedPositions();
+  await loadTransactions();
   await loadSnapshots();
   render();
   renderHistory();
+  renderTransactions();
   renderTrendChart();
   refreshPrices();
   setInterval(refreshPrices, 30000);
