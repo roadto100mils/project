@@ -176,12 +176,27 @@ function renderSummary(data) {
     </div>
     ` : ''}
 
-    <div class="symbols-card">
+    <div class="symbols-card" style="margin-bottom:24px;">
       <div class="symbols-label">This fund currently holds positions in:</div>
       <div class="symbol-pills">
         ${data.symbols.map(s => `<span class="pill">${s}</span>`).join('')}
       </div>
     </div>
+
+    ${(data.messages && data.messages.length) ? `
+    <div class="symbols-card">
+      <div class="symbols-label">Updates</div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        ${data.messages.map(m => `
+          <div style="border-top:1px solid #232838; padding-top:12px;">
+            <div class="faint mono" style="font-size:0.7rem; margin-bottom:4px;">${m.date}${m.recipientType === 'specific' ? ' · Private message' : ''}</div>
+            ${m.text ? `<div style="font-size:0.9rem; line-height:1.5;">${m.text.replace(/</g, '&lt;')}</div>` : ''}
+            ${m.fileDataUrl ? `<a href="${m.fileDataUrl}" download="${m.fileName}" style="display:inline-block; margin-top:8px; color:#D4A657; font-size:0.85rem;">📎 ${m.fileName}</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
 
     <div class="footer-note">
       Not investment advice.

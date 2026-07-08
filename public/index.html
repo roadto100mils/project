@@ -276,6 +276,43 @@
     <span class="faint mono" id="investorSaveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
   </div>
 
+  <div style="margin-top:56px;">
+    <div class="eyebrow">Communication</div>
+    <h1 style="font-size:1.4rem;">Updates</h1>
+    <p class="faint" style="font-size:0.8rem; margin-top:-8px; margin-bottom:20px;">
+      Send an announcement to all customers, or a private message to one. Optional attachment (image/file, keep it under ~3MB).
+    </p>
+
+    <div style="background:#12161F; border:1px solid #232838; border-radius:12px; padding:20px; margin-bottom:20px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <select id="messageRecipient" class="edit-input" style="width:220px;">
+          <option value="all">All customers (announcement)</option>
+        </select>
+      </div>
+      <textarea id="messageText" placeholder="Write your update…" rows="3" style="width:100%; background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:10px 12px; border-radius:8px; font-family:inherit; font-size:0.9rem; box-sizing:border-box; resize:vertical;"></textarea>
+      <div style="display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;">
+        <input type="file" id="messageFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="font-size:0.8rem; color:#8A8F9E;" />
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        <span class="faint mono" id="messageSendStatus" style="font-size:0.75rem;"></span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>To</th>
+            <th>Message</th>
+            <th>Attachment</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="messagesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="faint" style="font-size:0.75rem; margin-top:40px; padding-top:24px;">
     Prices in this prototype are simulated for demonstration. Not investment advice.
   </div>
@@ -301,6 +338,7 @@ let closingId = null;
 let addingId = null;
 let closedPositions = [];
 let transactions = [];
+let messages = [];
 let nextId = 1;
 let saveTimer = null;
 
@@ -931,6 +969,7 @@ function renderInvestors() {
       <td class="row-actions"><button class="del" onclick="removeInvestor(${inv.id})">✕</button></td>
     </tr>`;
   }).join('');
+  updateMessageRecipientOptions();
 }
 
 function updateInvestorField(id, field, value) {
@@ -955,6 +994,127 @@ function addInvestor() {
   saveInvestors();
   syncTotalCapital();
   render();
+}
+
+async function loadMessages() {
+  try {
+    const res = await fetch('/api/messages', { headers: authHeaders() });
+    const data = await res.json();
+    messages = data.messages || [];
+  } catch (e) {
+    console.error('Could not load messages:', e);
+    messages = [];
+  }
+}
+
+function saveMessagesNow() {
+  return fetch('/api/messages', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ messages }),
+  }).catch(e => console.error('Could not save messages:', e));
+}
+
+function updateMessageRecipientOptions() {
+  const select = document.getElementById('messageRecipient');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="all">All customers (announcement)</option>' +
+    investors.map(inv => `<option value="${inv.id}">${inv.name} (private)</option>`).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendMessage() {
+  const textEl = document.getElementById('messageText');
+  const fileEl = document.getElementById('messageFile');
+  const recipientEl = document.getElementById('messageRecipient');
+  const statusEl = document.getElementById('messageSendStatus');
+  const text = textEl.value.trim();
+  const recipientValue = recipientEl.value;
+  const file = fileEl.files[0];
+
+  if (!text && !file) {
+    statusEl.textContent = 'Write something or attach a file first.';
+    statusEl.style.color = '#EB5757';
+    return;
+  }
+  if (file && file.size > 3 * 1024 * 1024) {
+    statusEl.textContent = 'File too large — keep attachments under 3MB.';
+    statusEl.style.color = '#EB5757';
+    return;
+  }
+
+  statusEl.textContent = 'Sending…';
+  statusEl.style.color = '#5C6270';
+
+  let fileDataUrl = null, fileName = null;
+  if (file) {
+    try {
+      fileDataUrl = await fileToDataUrl(file);
+      fileName = file.name;
+    } catch (e) {
+      statusEl.textContent = `Could not read file: ${e.message}`;
+      statusEl.style.color = '#EB5757';
+      return;
+    }
+  }
+
+  const recipientType = recipientValue === 'all' ? 'all' : 'specific';
+  const recipientId = recipientType === 'specific' ? parseInt(recipientValue, 10) : null;
+  const recipientName = recipientType === 'all' ? 'All customers' : (investors.find(i => i.id === recipientId)?.name || 'Unknown');
+
+  messages.push({
+    id: Date.now(),
+    text,
+    fileDataUrl,
+    fileName,
+    recipientType,
+    recipientId,
+    recipientName,
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  await saveMessagesNow();
+  textEl.value = '';
+  fileEl.value = '';
+  statusEl.textContent = 'Sent';
+  statusEl.style.color = '#6FCF97';
+  renderMessages();
+}
+
+function deleteMessage(id) {
+  const confirmed = confirm('Delete this message? This cannot be undone.');
+  if (!confirmed) return;
+  messages = messages.filter(m => m.id !== id);
+  saveMessagesNow();
+  renderMessages();
+}
+
+function renderMessages() {
+  const body = document.getElementById('messagesBody');
+  if (!body) return;
+  updateMessageRecipientOptions();
+  if (messages.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" class="faint" style="padding:16px;">No messages sent yet.</td></tr>';
+    return;
+  }
+  const sorted = [...messages].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  body.innerHTML = sorted.map(m => `<tr>
+    <td class="mono" style="font-size:0.8rem;">${m.date}</td>
+    <td class="muted" style="font-size:0.85rem;">${m.recipientName}</td>
+    <td style="font-size:0.85rem; max-width:300px;">${(m.text || '').replace(/</g, '&lt;')}</td>
+    <td style="font-size:0.8rem;">${m.fileDataUrl ? `<a href="${m.fileDataUrl}" download="${m.fileName}" style="color:#D4A657;">${m.fileName}</a>` : '—'}</td>
+    <td class="row-actions"><button class="del" onclick="deleteMessage(${m.id})">✕</button></td>
+  </tr>`).join('');
 }
 
 function toggleAdminPwVisibility() {
@@ -1058,10 +1218,12 @@ async function init() {
   syncTotalCapital();
   await loadClosedPositions();
   await loadTransactions();
+  await loadMessages();
   await loadSnapshots();
   render();
   renderHistory();
   renderTransactions();
+  renderMessages();
   renderTrendChart();
   refreshPrices();
   setInterval(refreshPrices, 30000);

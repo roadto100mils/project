@@ -27,10 +27,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const [holdings, investors, closedPositions] = await Promise.all([
+    const [holdings, investors, closedPositions, messages] = await Promise.all([
       redis.get("holdings:default"),
       redis.get("investors"),
       redis.get("closedPositions"),
+      redis.get("messages"),
     ]);
     const investorList = investors || [];
     const investor = investorList.find(
@@ -50,8 +51,13 @@ module.exports = async function handler(req, res) {
       totalCapital,
       closedPositions || []
     );
+
+    const myMessages = (messages || [])
+      .filter((m) => m.recipientType === "all" || m.recipientId === investor.id)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json(summary);
+    res.status(200).json({ ...summary, messages: myMessages });
   } catch (e) {
     res.status(500).json({ error: `Could not compute view: ${e.message}` });
   }
