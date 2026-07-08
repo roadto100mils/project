@@ -27,10 +27,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const [holdings, investors, totalCapital, closedPositions] = await Promise.all([
+    const [holdings, investors, closedPositions] = await Promise.all([
       redis.get("holdings:default"),
       redis.get("investors"),
-      redis.get("fundCapital"),
       redis.get("closedPositions"),
     ]);
     const investorList = investors || [];
@@ -41,11 +40,14 @@ module.exports = async function handler(req, res) {
       res.status(401).json({ error: "Incorrect username or password" });
       return;
     }
+    // Total fund capital is the sum of everyone's contributed amounts — kept in
+    // sync automatically rather than entered separately.
+    const totalCapital = investorList.reduce((s, i) => s + (i.contributed || 0), 0);
     const summary = await computeInvestorSummary(
       investor,
       investorList,
       holdings || [],
-      totalCapital || 0,
+      totalCapital,
       closedPositions || []
     );
     res.setHeader("Cache-Control", "no-store");

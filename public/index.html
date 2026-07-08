@@ -136,12 +136,12 @@
     <p class="faint" style="font-size:0.75rem; margin-top:12px;">
       US prices come from Twelve Data, KLSE prices from iTick. If either shows an error in the status line below the totals, check the browser console (right-click → Inspect → Console) for the raw API response.
     </p>
-    <label style="display:flex; align-items:center; gap:12px; font-size:0.9rem; margin-top:16px; padding-top:16px; border-top:1px solid #232838;">
+    <div style="display:flex; align-items:center; gap:12px; font-size:0.9rem; margin-top:16px; padding-top:16px; border-top:1px solid #232838;">
       Total Fund Capital (MYR)
-      <input type="number" step="0.01" id="totalCapitalInput" value="0" onchange="updateTotalCapital(this.value)" />
-    </label>
+      <span class="mono" id="totalCapitalDisplay" style="color:#F4F2ED; font-weight:600;">RM 0.00</span>
+    </div>
     <p class="faint" style="font-size:0.7rem; margin-top:6px;">
-      All the money available to this fund, including what's already invested. Cash below is this minus the cost of current holdings.
+      Auto-synced as the sum of all customers' contributed amounts below (Customers section). Cash further down is this plus realized P&L, minus the cost of current holdings.
     </p>
   </div>
 
@@ -413,7 +413,7 @@ function render() {
     if (cash < 0) {
       cashEl.textContent = 'RM 0.00';
       cashEl.style.color = '#EB5757';
-      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available capital (total capital + realized P&L) by RM ${fmt(Math.abs(cash))} — increase Total Fund Capital in Settings or reduce holdings.`;
+      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available capital (total customer contributions + realized P&L) by RM ${fmt(Math.abs(cash))} — add/increase a customer's contribution or reduce holdings.`;
     } else {
       cashEl.textContent = 'RM ' + fmt(cash);
       cashEl.style.color = '#F4F2ED';
@@ -939,15 +939,22 @@ function updateInvestorField(id, field, value) {
     return Object.assign({}, i, { [field]: field === 'contributed' ? (parseFloat(value) || 0) : value });
   });
   saveInvestors();
-  renderInvestors();
+  syncTotalCapital();
+  render();
 }
-function removeInvestor(id) { investors = investors.filter(i => i.id !== id); saveInvestors(); renderInvestors(); }
+function removeInvestor(id) {
+  investors = investors.filter(i => i.id !== id);
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
 function addInvestor() {
   const id = investorNextId++;
   const today = new Date().toISOString().slice(0, 10);
   investors.push({ id, name: 'New Customer', contributed: 0, joinDate: today, username: `customer${id}`, password: '' });
   saveInvestors();
-  renderInvestors();
+  syncTotalCapital();
+  render();
 }
 
 function toggleAdminPwVisibility() {
@@ -962,27 +969,10 @@ function toggleAdminPwVisibility() {
   }
 }
 
-async function loadTotalCapital() {
-  try {
-    const res = await fetch('/api/fund-capital', { headers: authHeaders() });
-    const data = await res.json();
-    totalCapital = data.totalCapital || 0;
-  } catch (e) {
-    console.error('Could not load fund capital:', e);
-    totalCapital = 0;
-  }
-  const input = document.getElementById('totalCapitalInput');
-  if (input) input.value = totalCapital;
-}
-
-function updateTotalCapital(value) {
-  totalCapital = parseFloat(value) || 0;
-  fetch('/api/fund-capital', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ totalCapital }),
-  }).catch(e => console.error('Could not save fund capital:', e));
-  render();
+function syncTotalCapital() {
+  totalCapital = investors.reduce((s, i) => s + (parseFloat(i.contributed) || 0), 0);
+  const display = document.getElementById('totalCapitalDisplay');
+  if (display) display.textContent = 'RM ' + fmt(totalCapital);
 }
 
 let snapshotHistory = [];
@@ -1065,7 +1055,7 @@ async function init() {
   }
   await loadHoldings();
   await loadInvestors();
-  await loadTotalCapital();
+  syncTotalCapital();
   await loadClosedPositions();
   await loadTransactions();
   await loadSnapshots();
