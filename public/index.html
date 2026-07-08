@@ -69,6 +69,7 @@
   .table-wrap { border: 1px solid #232838; border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 16px; }
   .table-wrap table { min-width: 640px; }
   .edit-input { background: #0B0E14; border: 1px solid #232838; color: #E8E6DF; padding: 3px 6px; border-radius: 4px; width: 70px; font-family: inherit; }
+  input[type="date"].edit-input { width: 130px; }
   .edit-input.wide { width: 120px; }
   .row-actions button { border: none; background: #232838; color: #8A8F9E; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-right: 4px; }
   .row-actions .del { background: transparent; color: #5C6270; }
@@ -83,6 +84,7 @@
     .btn { padding: 8px 12px; font-size: 0.85rem; }
     .edit-input { font-size: 16px; padding: 6px 8px; width: 60px; }
     .edit-input.wide { width: 90px; }
+    input[type="date"].edit-input { width: 128px; }
     .ticker-item { font-size: 0.7rem; margin: 0 10px; }
     table { font-size: 0.8rem; }
     thead th { padding: 8px 10px; }
@@ -248,7 +250,7 @@
     <div class="eyebrow">Customers</div>
     <h1 style="font-size:1.4rem;">Investor Shares</h1>
     <p class="faint" style="font-size:0.8rem; margin-top:-8px; margin-bottom:20px;">
-      Each customer's value is the higher of (a) their actual proportional share of the fund's performance, or (b) a 6% per annum guaranteed floor, compounded from their join date. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
+      Each customer's value reflects their actual proportional share of the fund's performance. A 6% per annum guaranteed floor (compounded from their join date) is shown separately as a target/commitment — it doesn't change the value above. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
     </p>
 
     <div class="table-wrap">
@@ -284,11 +286,12 @@
     </p>
 
     <div style="background:#12161F; border:1px solid #232838; border-radius:12px; padding:20px; margin-bottom:20px;">
-      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-        <select id="messageRecipient" class="edit-input" style="width:220px;">
+      <label style="display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:0.85rem; color:#8A8F9E;">
+        Send to
+        <select id="messageRecipient" style="background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:8px 12px; border-radius:8px; font-family:inherit; font-size:0.85rem; min-width:220px;">
           <option value="all">All customers (announcement)</option>
         </select>
-      </div>
+      </label>
       <textarea id="messageText" placeholder="Write your update…" rows="3" style="width:100%; background:#0B0E14; border:1px solid #232838; color:#E8E6DF; padding:10px 12px; border-radius:8px; font-family:inherit; font-size:0.9rem; box-sizing:border-box; resize:vertical;"></textarea>
       <div style="display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;">
         <input type="file" id="messageFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="font-size:0.8rem; color:#8A8F9E;" />
