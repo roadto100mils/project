@@ -159,20 +159,23 @@ function renderSummary(data) {
       </div>
     </div>
 
-    ${data.investmentDate ? `
-    <div class="sub-cards">
-      <div class="sub-card">
-        <div class="sub-label">Investment Date</div>
-        <div class="sub-value mono" style="font-size:1rem;">${data.investmentDate}</div>
-      </div>
-      <div class="sub-card">
-        <div class="sub-label">Guaranteed Return Payout Date</div>
-        <div class="sub-value mono" style="font-size:1rem;">${data.guaranteedPayoutDate}</div>
-      </div>
-    </div>
+    ${(data.guaranteeBreakdown && data.guaranteeBreakdown.length) ? `
     <div class="symbols-card" style="margin-bottom:24px;">
-      <div class="symbols-label">Guaranteed Return (6% p.a.)</div>
-      <div class="mono" style="font-size:1.1rem; color:#D4A657;">RM ${fmt(data.guaranteedTargetAmount)}</div>
+      <div class="symbols-label">Guaranteed Return (6% p.a.), by contribution</div>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+        ${data.guaranteeBreakdown.map(g => `
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #232838; padding-top:10px;">
+            <div>
+              <div class="faint mono" style="font-size:0.7rem;">Invested ${g.investmentDate}</div>
+              <div class="mono" style="font-size:0.85rem; color:#8A8F9E;">RM ${fmt(g.amount)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="mono" style="font-size:1rem; color:#D4A657;">RM ${fmt(g.guaranteedTargetAmount)}</div>
+              <div class="faint mono" style="font-size:0.7rem;">by ${g.guaranteedPayoutDate}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
     </div>
     ` : ''}
 

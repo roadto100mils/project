@@ -258,8 +258,7 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th class="num">Contributed (MYR)</th>
-            <th>Join Date</th>
+            <th class="num">Total Contributed (MYR)</th>
             <th class="num">Share</th>
             <th class="num">Current Value</th>
             <th>Username</th>
@@ -887,6 +886,30 @@ async function refreshPrices() {
 let investors = [];
 let investorNextId = 1;
 let investorSaveTimer = null;
+let expandedInvestorId = null;
+let contribNextId = 1;
+
+function getInvestorContributions(inv) {
+  if (Array.isArray(inv.contributions) && inv.contributions.length) {
+    return inv.contributions;
+  }
+  // Migrate legacy single contributed+joinDate record into the new lot format
+  if (inv.contributed) {
+    return [{ id: 1, amount: inv.contributed, date: inv.joinDate || null }];
+  }
+  return [];
+}
+
+function investorTotalContributed(inv) {
+  return getInvestorContributions(inv).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+}
+
+function investorGuaranteedValue(inv) {
+  return getInvestorContributions(inv).reduce((s, c) => {
+    const years = yearsSince(c.date);
+    return s + (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+  }, 0);
+}
 
 async function loadInvestors() {
   try {
@@ -897,7 +920,15 @@ async function loadInvestors() {
     console.error('Could not load investors:', e);
     investors = [];
   }
+  // Migrate any legacy single contributed+joinDate investors to the multi-contribution format
+  investors = investors.map(inv => {
+    if (Array.isArray(inv.contributions)) return inv;
+    const contributions = getInvestorContributions(inv);
+    return Object.assign({}, inv, { contributions });
+  });
   investorNextId = Math.max(0, ...investors.map(i => i.id || 0)) + 1;
+  const allContribIds = investors.flatMap(i => (i.contributions || []).map(c => c.id || 0));
+  contribNextId = Math.max(0, ...allContribIds) + 1;
 }
 
 function saveInvestorsNow() {
@@ -952,17 +983,21 @@ function renderInvestors() {
   const totalFundEquity = totalCapital + overallGainForInvestors;
 
   body.innerHTML = investors.map(inv => {
-    const contributed = parseFloat(inv.contributed) || 0;
+    const contributed = investorTotalContributed(inv);
     const actualValue = contributed * (1 + fundReturnPct);
-    const years = yearsSince(inv.joinDate);
-    const guaranteedValue = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+    const guaranteedValue = investorGuaranteedValue(inv);
     const value = actualValue; // Current Value = actual performance only; guarantee shown separately
     const share = totalFundEquity > 0 ? value / totalFundEquity : 0;
     const belowGuarantee = guaranteedValue > actualValue;
-    return `<tr>
+    const lots = getInvestorContributions(inv);
+    const isExpanded = expandedInvestorId === inv.id;
+
+    const mainRow = `<tr>
       <td><input class="edit-input wide" value="${inv.name || ''}" onchange="updateInvestorField(${inv.id},'name',this.value)" /></td>
-      <td class="num"><input class="edit-input" type="number" value="${contributed}" onchange="updateInvestorField(${inv.id},'contributed',this.value)" /></td>
-      <td><input class="edit-input" type="date" value="${inv.joinDate || ''}" onchange="updateInvestorField(${inv.id},'joinDate',this.value)" /></td>
+      <td class="num mono">
+        RM ${fmt(contributed)}
+        <button class="btn" style="font-size:0.7rem; padding:2px 8px; margin-left:6px;" onclick="toggleInvestorLots(${inv.id})">${isExpanded ? 'Hide' : `Lots (${lots.length})`}</button>
+      </td>
       <td class="num mono">${(share * 100).toFixed(1)}%</td>
       <td class="num mono" title="${belowGuarantee ? `Below the 6% p.a. guarantee floor of RM ${fmt(guaranteedValue)} — you'll owe the difference at payout` : 'At or above the guaranteed floor'}">
         RM ${fmt(value)}${belowGuarantee ? ' <span style="color:#EB5757; font-size:0.7rem;">(below floor)</span>' : ''}
@@ -971,19 +1006,86 @@ function renderInvestors() {
       <td><input class="edit-input" value="${inv.password || ''}" onchange="updateInvestorField(${inv.id},'password',this.value)" /></td>
       <td class="row-actions"><button class="del" onclick="removeInvestor(${inv.id})">✕</button></td>
     </tr>`;
+
+    if (!isExpanded) return mainRow;
+
+    const lotsRows = lots.map(c => {
+      const years = yearsSince(c.date);
+      const lotGuaranteed = (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+      return `<tr style="background:#0D1119;">
+        <td class="faint" style="padding-left:24px; font-size:0.8rem;">Lot</td>
+        <td class="num"><input class="edit-input" type="number" value="${c.amount}" onchange="updateContribution(${inv.id},${c.id},'amount',this.value)" /></td>
+        <td colspan="2">
+          <input class="edit-input" type="date" value="${c.date || ''}" onchange="updateContribution(${inv.id},${c.id},'date',this.value)" />
+          <span class="faint mono" style="font-size:0.75rem; margin-left:8px;">guaranteed today: RM ${fmt(lotGuaranteed)}</span>
+        </td>
+        <td colspan="2"></td>
+        <td class="row-actions"><button class="del" onclick="removeContribution(${inv.id},${c.id})">✕</button></td>
+      </tr>`;
+    }).join('');
+
+    const addLotRow = `<tr style="background:#0D1119;">
+      <td colspan="7" style="padding-left:24px;">
+        <button class="btn btn-ghost" style="font-size:0.75rem; padding:5px 10px;" onclick="addContribution(${inv.id})">+ Add contribution</button>
+      </td>
+    </tr>`;
+
+    return mainRow + lotsRows + addLotRow;
   }).join('');
   updateMessageRecipientOptions();
+}
+
+function toggleInvestorLots(id) {
+  expandedInvestorId = expandedInvestorId === id ? null : id;
+  renderInvestors();
 }
 
 function updateInvestorField(id, field, value) {
   investors = investors.map(i => {
     if (i.id !== id) return i;
-    return Object.assign({}, i, { [field]: field === 'contributed' ? (parseFloat(value) || 0) : value });
+    return Object.assign({}, i, { [field]: value });
+  });
+  saveInvestors();
+  render();
+}
+
+function addContribution(investorId) {
+  const cid = contribNextId++;
+  const today = new Date().toISOString().slice(0, 10);
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i);
+    return Object.assign({}, i, { contributions: [...contributions, { id: cid, amount: 0, date: today }] });
   });
   saveInvestors();
   syncTotalCapital();
   render();
 }
+
+function updateContribution(investorId, contribId, field, value) {
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i).map(c =>
+      c.id === contribId ? Object.assign({}, c, { [field]: field === 'amount' ? (parseFloat(value) || 0) : value }) : c
+    );
+    return Object.assign({}, i, { contributions });
+  });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
+function removeContribution(investorId, contribId) {
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i).filter(c => c.id !== contribId);
+    return Object.assign({}, i, { contributions });
+  });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
 function removeInvestor(id) {
   investors = investors.filter(i => i.id !== id);
   saveInvestors();
@@ -992,8 +1094,9 @@ function removeInvestor(id) {
 }
 function addInvestor() {
   const id = investorNextId++;
+  const cid = contribNextId++;
   const today = new Date().toISOString().slice(0, 10);
-  investors.push({ id, name: 'New Customer', contributed: 0, joinDate: today, username: `customer${id}`, password: '' });
+  investors.push({ id, name: 'New Customer', contributions: [{ id: cid, amount: 0, date: today }], username: `customer${id}`, password: '' });
   saveInvestors();
   syncTotalCapital();
   render();
@@ -1133,7 +1236,7 @@ function toggleAdminPwVisibility() {
 }
 
 function syncTotalCapital() {
-  totalCapital = investors.reduce((s, i) => s + (parseFloat(i.contributed) || 0), 0);
+  totalCapital = investors.reduce((s, i) => s + investorTotalContributed(i), 0);
   const display = document.getElementById('totalCapitalDisplay');
   if (display) display.textContent = 'RM ' + fmt(totalCapital);
 }

@@ -4,7 +4,7 @@
 // bank-grade security; good enough to keep casual visitors out, not a determined attacker.
 
 const { Redis } = require("@upstash/redis");
-const { computeInvestorSummary } = require("./_lib/investorCalc");
+const { computeInvestorSummary, totalContributed } = require("./_lib/investorCalc");
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -41,9 +41,9 @@ module.exports = async function handler(req, res) {
       res.status(401).json({ error: "Incorrect username or password" });
       return;
     }
-    // Total fund capital is the sum of everyone's contributed amounts — kept in
-    // sync automatically rather than entered separately.
-    const totalCapital = investorList.reduce((s, i) => s + (i.contributed || 0), 0);
+    // Total fund capital is the sum of everyone's contributions (across all lots) —
+    // kept in sync automatically rather than entered separately.
+    const totalCapital = investorList.reduce((s, i) => s + totalContributed(i), 0);
     const summary = await computeInvestorSummary(
       investor,
       investorList,

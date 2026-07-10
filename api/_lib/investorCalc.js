@@ -1,10 +1,15 @@
 // Shared calculation logic: given an investor, the full investor list, and the fund's
 // holdings, compute what that investor should see (their share of the fund value,
-// with a guaranteed minimum annualized return).
+// with a guaranteed minimum annualized return per contribution).
+//
+// Investors can have multiple contributions at different dates (e.g. RM5,000 in July,
+// another RM5,000 in October) — each is tracked separately as its own "lot" so the
+// 6% guarantee compounds correctly from each lot's own date, instead of treating a
+// later top-up as if it had been invested since the very first contribution.
 
 const { fetchUsQuotes, fetchKlseQuotes, fetchFxRate } = require("./market");
 
-const GUARANTEED_ANNUAL_RATE = 0.06; // 6% p.a., compounded annually, as a floor
+const GUARANTEED_ANNUAL_RATE = 0.06; // 6% p.a., compounded annually, as a floor per lot
 
 function yearsSince(dateStr) {
   if (!dateStr) return 0;
@@ -28,6 +33,23 @@ function addPeriodMinusOneDay(dateStr, years) {
   d.setFullYear(d.getFullYear() + years);
   d.setDate(d.getDate() - 1);
   return d;
+}
+
+// Returns an investor's contributions as a list of {id, amount, date} lots.
+// Falls back to legacy single contributed+joinDate fields for older records that
+// haven't been migrated to the multi-contribution format yet.
+function getContributions(investor) {
+  if (Array.isArray(investor.contributions) && investor.contributions.length) {
+    return investor.contributions;
+  }
+  if (investor.contributed) {
+    return [{ id: 1, amount: investor.contributed, date: investor.joinDate || null }];
+  }
+  return [];
+}
+
+function totalContributed(investor) {
+  return getContributions(investor).reduce((s, c) => s + (c.amount || 0), 0);
 }
 
 async function computeInvestorSummary(investor, investorList, holdingsList, totalCapital, closedPositions) {
@@ -61,16 +83,13 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
   const fundReturnPct = totalCapital > 0 ? overallGain / totalCapital : 0;
   const totalFundValue = totalCapital + overallGain; // total fund equity (cash + holdings)
 
-  const totalContributed = investorList.reduce((s, i) => s + (i.contributed || 0), 0);
+  const contributions = getContributions(investor);
+  const contributed = totalContributed(investor);
 
-  const contributed = investor.contributed || 0;
+  // Simplification retained: actual performance applies the fund's overall return
+  // equally to all of an investor's money, regardless of which lot/date it came in.
+  // The guarantee below is calculated per-lot and is more precise.
   const actualValue = contributed * (1 + fundReturnPct);
-
-  const years = yearsSince(investor.joinDate);
-  const guaranteedValue = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
-
-  // Current Value reflects actual fund performance only. The guarantee is shown
-  // separately below as a target/commitment, not blended into this number.
   const currentValue = actualValue;
   const gain = currentValue - contributed;
   const gainPct = contributed ? (gain / contributed) * 100 : 0;
@@ -78,20 +97,26 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
 
   const symbols = [...new Set(holdingsList.map((h) => h.symbol))];
 
-  // Next guarantee milestone: the upcoming annual target that hasn't been reached yet.
-  // Shown purely as an informational commitment — separate from Current Value above.
-  let investmentDate = null;
-  let guaranteedTargetAmount = null;
-  let guaranteedPayoutDate = null;
-  if (investor.joinDate) {
-    const joinDateObj = new Date(investor.joinDate);
-    if (!isNaN(joinDateObj.getTime())) {
-      investmentDate = formatDateDMY(joinDateObj);
+  // Per-lot guarantee breakdown: each contribution compounds independently from its
+  // own date, so a later top-up isn't unfairly credited with guarantee growth from
+  // before it was even invested.
+  let totalGuaranteedValue = 0;
+  const guaranteeBreakdown = contributions
+    .filter((c) => c.date)
+    .map((c) => {
+      const years = yearsSince(c.date);
+      const lotGuaranteedValue = (c.amount || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+      totalGuaranteedValue += lotGuaranteedValue;
       const periodNumber = Math.floor(years) + 1;
-      guaranteedTargetAmount = contributed * Math.pow(1 + GUARANTEED_ANNUAL_RATE, periodNumber);
-      guaranteedPayoutDate = formatDateDMY(addPeriodMinusOneDay(investor.joinDate, periodNumber));
-    }
-  }
+      const targetAmount = (c.amount || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, periodNumber);
+      const payoutDate = formatDateDMY(addPeriodMinusOneDay(c.date, periodNumber));
+      return {
+        investmentDate: formatDateDMY(new Date(c.date)),
+        amount: c.amount,
+        guaranteedTargetAmount: targetAmount,
+        guaranteedPayoutDate: payoutDate,
+      };
+    });
 
   return {
     name: investor.name,
@@ -100,13 +125,11 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
     currentValue,
     gain,
     gainPct,
-    belowGuarantee: guaranteedValue > actualValue,
-    investmentDate,
-    guaranteedTargetAmount,
-    guaranteedPayoutDate,
+    belowGuarantee: totalGuaranteedValue > actualValue,
+    guaranteeBreakdown,
     symbols,
     errors: [...usQ.errors, ...klseQ.errors],
   };
 }
 
-module.exports = { computeInvestorSummary, GUARANTEED_ANNUAL_RATE, yearsSince };
+module.exports = { computeInvestorSummary, GUARANTEED_ANNUAL_RATE, yearsSince, getContributions, totalContributed };
