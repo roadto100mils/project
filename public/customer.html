@@ -5,50 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>My Investment</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root, body.theme-terminal {
+    --bg: #0B0E14;
+    --surface: #12161F;
+    --surface-alt: #0D1119;
+    --border: #232838;
+    --text: #E8E6DF;
+    --heading: #F4F2ED;
+    --muted: #8A8F9E;
+    --faint: #5C6270;
+    --accent: #D4A657;
+    --accent-contrast: #12161F;
+    --up: #6FCF97;
+    --down: #EB5757;
+    --font-heading: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  body.theme-ledger {
+    --bg: #F6F2E9;
+    --surface: #FFFFFF;
+    --surface-alt: #EFE8D8;
+    --border: #E0D6BE;
+    --text: #2E2B24;
+    --heading: #1E2A22;
+    --muted: #746C5B;
+    --faint: #A79C82;
+    --accent: #A47C3B;
+    --accent-contrast: #FFFFFF;
+    --up: #2E7D4F;
+    --down: #B23A2E;
+    --font-heading: 'Fraunces', serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  body.theme-minimal {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface-alt: #F0F2F5;
+    --border: #E2E5EA;
+    --text: #1F2430;
+    --heading: #10131C;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --accent: #3654E0;
+    --accent-contrast: #FFFFFF;
+    --up: #16A34A;
+    --down: #DC2626;
+    --font-heading: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  .theme-switcher { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+  .theme-switcher button {
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    font-size: 0.7rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-family: var(--font-heading);
+  }
+  .theme-switcher button.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: #0B0E14;
-    color: #E8E6DF;
-    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-heading);
     min-height: 100vh;
   }
-  .mono { font-family: 'IBM Plex Mono', monospace; }
-  .muted { color: #8A8F9E; }
-  .faint { color: #5C6270; }
+  .mono { font-family: var(--font-mono); }
+  .muted { color: var(--muted); }
+  .faint { color: var(--faint); }
   .wrap { max-width: 480px; margin: 0 auto; padding: 60px 24px; }
-  .eyebrow { color: #8A8F9E; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-  h1 { font-size: 1.8rem; font-weight: 700; color: #F4F2ED; margin: 0 0 32px 0; }
+  .eyebrow { color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: 1.8rem; font-weight: 700; color: var(--heading); margin: 0 0 32px 0; }
 
-  .login-card { background: #12161F; border: 1px solid #232838; border-radius: 16px; padding: 32px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
   .field { margin-bottom: 16px; }
-  .field label { display: block; color: #8A8F9E; font-size: 0.85rem; margin-bottom: 6px; }
+  .field label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
   .field input {
-    width: 100%; background: #0B0E14; border: 1px solid #232838; color: #E8E6DF;
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
     padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 16px;
   }
   .login-btn {
-    width: 100%; background: #D4A657; color: #12161F; border: none; padding: 12px;
+    width: 100%; background: var(--accent); color: var(--accent-contrast); border: none; padding: 12px;
     border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 8px;
   }
-  .login-error { color: #EB5757; font-size: 0.85rem; margin-top: 12px; text-align: center; }
+  .login-error { color: var(--down); font-size: 0.85rem; margin-top: 12px; text-align: center; }
 
-  .hero { background: #12161F; border: 1px solid #232838; border-radius: 16px; padding: 32px; margin-bottom: 24px; text-align: center; }
-  .hero-label { color: #8A8F9E; font-size: 0.85rem; margin-bottom: 10px; }
-  .hero-value { font-family: 'IBM Plex Mono', monospace; font-size: 2.6rem; font-weight: 700; color: #F4F2ED; }
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; text-align: center; }
+  .hero-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; }
+  .hero-value { font-family: var(--font-mono); font-size: 2.6rem; font-weight: 700; color: var(--heading); }
   .sub-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-  .sub-card { background: #12161F; border: 1px solid #232838; border-radius: 12px; padding: 18px; text-align: center; }
-  .sub-label { color: #8A8F9E; font-size: 0.75rem; margin-bottom: 6px; }
-  .sub-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; }
-  .up { color: #6FCF97; }
-  .down { color: #EB5757; }
-  .symbols-card { background: #12161F; border: 1px solid #232838; border-radius: 12px; padding: 20px; }
-  .symbols-label { color: #8A8F9E; font-size: 0.8rem; margin-bottom: 12px; }
+  .sub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+  .sub-label { color: var(--muted); font-size: 0.75rem; margin-bottom: 6px; }
+  .sub-value { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .symbols-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .symbols-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 12px; }
   .symbol-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .pill { background: #1B2030; border: 1px solid #2A3040; padding: 6px 12px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: #D4A657; }
-  .footer-note { color: #5C6270; font-size: 0.75rem; margin-top: 32px; text-align: center; }
-  .logout-btn { background: none; border: 1px solid #232838; color: #8A8F9E; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; float: right; }
+  .pill { background: var(--surface-alt); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
+  .footer-note { color: var(--faint); font-size: 0.75rem; margin-top: 32px; text-align: center; }
+  .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; float: right; }
 
   @media (max-width: 480px) {
     .wrap { padding: 32px 16px; }
@@ -63,9 +119,31 @@
 </style>
 </head>
 <body>
-  <div class="wrap" id="app"></div>
+  <div style="max-width:480px; margin:0 auto; padding-top:24px;">
+    <div class="theme-switcher" id="themeSwitcher">
+      <button onclick="setTheme('terminal')" data-theme-btn="terminal">Terminal</button>
+      <button onclick="setTheme('ledger')" data-theme-btn="ledger">Ledger</button>
+      <button onclick="setTheme('minimal')" data-theme-btn="minimal">Minimal</button>
+    </div>
+  </div>
+  <div class="wrap" id="app" style="padding-top:12px;"></div>
 
 <script>
+function setTheme(name) {
+  document.body.className = 'theme-' + name;
+  localStorage.setItem('dashboardTheme', name);
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === name);
+  });
+}
+(function initTheme() {
+  const saved = localStorage.getItem('dashboardTheme') || 'terminal';
+  document.body.className = 'theme-' + saved;
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === saved);
+  });
+})();
+
 const fmt = (n) => new Intl.NumberFormat('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
 function renderLogin(errorMsg) {
@@ -82,7 +160,7 @@ function renderLogin(errorMsg) {
         <label>Password</label>
         <div style="position:relative;">
           <input type="password" id="password" autocomplete="current-password" style="padding-right:44px; box-sizing:border-box; width:100%;" />
-          <button type="button" onclick="togglePwVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#8A8F9E; cursor:pointer; font-size:0.75rem; padding:4px;">Show</button>
+          <button type="button" onclick="togglePwVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.75rem; padding:4px;">Show</button>
         </div>
       </div>
       <button class="login-btn" onclick="doLogin()">Sign In</button>
@@ -164,13 +242,13 @@ function renderSummary(data) {
       <div class="symbols-label">Guaranteed Return (6% p.a.), by contribution</div>
       <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
         ${data.guaranteeBreakdown.map(g => `
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #232838; padding-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:10px;">
             <div>
               <div class="faint mono" style="font-size:0.7rem;">Invested ${g.investmentDate}</div>
-              <div class="mono" style="font-size:0.85rem; color:#8A8F9E;">RM ${fmt(g.amount)}</div>
+              <div class="mono" style="font-size:0.85rem; color:var(--muted);">RM ${fmt(g.amount)}</div>
             </div>
             <div style="text-align:right;">
-              <div class="mono" style="font-size:1rem; color:#D4A657;">RM ${fmt(g.guaranteedTargetAmount)}</div>
+              <div class="mono" style="font-size:1rem; color:var(--accent);">RM ${fmt(g.guaranteedTargetAmount)}</div>
               <div class="faint mono" style="font-size:0.7rem;">by ${g.guaranteedPayoutDate}</div>
             </div>
           </div>
@@ -191,10 +269,10 @@ function renderSummary(data) {
       <div class="symbols-label">Updates</div>
       <div style="display:flex; flex-direction:column; gap:14px;">
         ${data.messages.map(m => `
-          <div style="border-top:1px solid #232838; padding-top:12px;">
+          <div style="border-top:1px solid var(--border); padding-top:12px;">
             <div class="faint mono" style="font-size:0.7rem; margin-bottom:4px;">${m.date}${m.recipientType === 'specific' ? ' · Private message' : ''}</div>
             ${m.text ? `<div style="font-size:0.9rem; line-height:1.5;">${m.text.replace(/</g, '&lt;')}</div>` : ''}
-            ${m.fileDataUrl ? `<a href="${m.fileDataUrl}" download="${m.fileName}" style="display:inline-block; margin-top:8px; color:#D4A657; font-size:0.85rem;">📎 ${m.fileName}</a>` : ''}
+            ${m.fileDataUrl ? `<a href="${m.fileDataUrl}" download="${m.fileName}" style="display:inline-block; margin-top:8px; color:var(--accent); font-size:0.85rem;">📎 ${m.fileName}</a>` : ''}
           </div>
         `).join('')}
       </div>
