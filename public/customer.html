@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>My Investment</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
   :root, body.theme-dark {
     --bg: #0B0E14;
@@ -21,7 +21,7 @@
     --up: #6FCF97;
     --down: #EB5757;
     --font-heading: 'Inter', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
+    --font-mono: 'Inter', sans-serif;
   }
   body.theme-light {
     --bg: #F7F8FA;
@@ -37,7 +37,7 @@
     --up: #16A34A;
     --down: #DC2626;
     --font-heading: 'Inter', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
+    --font-mono: 'Inter', sans-serif;
   }
   .theme-switcher { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
   .theme-switcher button {
@@ -54,7 +54,7 @@
     font-family: var(--font-heading);
     min-height: 100vh;
   }
-  .mono { font-family: var(--font-mono); }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
   .faint { color: var(--faint); }
   .wrap { max-width: 480px; margin: 0 auto; padding: 60px 24px; }
@@ -76,11 +76,11 @@
 
   .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; text-align: center; }
   .hero-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; }
-  .hero-value { font-family: var(--font-mono); font-size: 2.6rem; font-weight: 700; color: var(--heading); }
+  .hero-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 2.6rem; font-weight: 700; color: var(--heading); }
   .sub-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
   .sub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
   .sub-label { color: var(--muted); font-size: 0.75rem; margin-bottom: 6px; }
-  .sub-value { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; }
+  .sub-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: 600; }
   .up { color: var(--up); }
   .down { color: var(--down); }
   .symbols-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
