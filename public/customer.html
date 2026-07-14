@@ -262,8 +262,8 @@ function renderSummary(data) {
               <div class="mono" style="font-size:0.85rem; color:var(--muted);">RM ${fmt(g.amount)}</div>
             </div>
             <div style="text-align:right;">
+              <div class="faint mono" style="font-size:0.7rem;">Guaranteed by ${g.guaranteedPayoutDate}</div>
               <div class="mono" style="font-size:1rem; color:var(--accent);">RM ${fmt(g.guaranteedTargetAmount)}</div>
-              <div class="faint mono" style="font-size:0.7rem;">by ${g.guaranteedPayoutDate}</div>
             </div>
           </div>
         `).join('')}
