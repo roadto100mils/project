@@ -170,12 +170,10 @@
 <div class="ticker-wrap"><div class="ticker-track mono" id="ticker"></div></div>
 
 <div class="wrap">
-  <div class="header">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:28px; box-shadow:var(--shadow);">
     <div>
-      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" style="margin-bottom:8px;" />
-      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" style="margin-bottom:8px;" />
-      <h1>Total Asset Value</h1>
-      <div class="faint mono" id="todayDate" style="font-size:0.8rem; margin-top:4px;"></div>
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" style="height:36px;" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" style="height:36px;" />
     </div>
     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <div class="theme-switcher" id="themeSwitcher">
@@ -184,6 +182,13 @@
       </div>
       <button class="btn" onclick="toggleSettings()">⚙ Settings</button>
       <button class="btn btn-primary" onclick="refreshPrices()">⟳ Refresh</button>
+    </div>
+  </div>
+
+  <div class="header" style="align-items:flex-start;">
+    <div>
+      <h1>Total Asset Value</h1>
+      <div class="faint mono" id="todayDate" style="font-size:0.8rem; margin-top:4px;"></div>
     </div>
   </div>
 
