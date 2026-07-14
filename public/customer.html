@@ -20,6 +20,7 @@
     --accent-contrast: #12161F;
     --up: #6FCF97;
     --down: #EB5757;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     --font-heading: 'Inter', sans-serif;
     --font-mono: 'Inter', sans-serif;
   }
@@ -36,6 +37,7 @@
     --accent-contrast: #FFFFFF;
     --up: #16A34A;
     --down: #DC2626;
+    --shadow: 0 2px 16px rgba(16, 19, 28, 0.07);
     --font-heading: 'Inter', sans-serif;
     --font-mono: 'Inter', sans-serif;
   }
@@ -53,6 +55,7 @@
     color: var(--text);
     font-family: var(--font-heading);
     min-height: 100vh;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
   .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
@@ -61,7 +64,7 @@
   .eyebrow { color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
   h1 { font-size: 1.8rem; font-weight: 700; color: var(--heading); margin: 0 0 32px 0; }
 
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease; }
   .field { margin-bottom: 16px; }
   .field label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
   .field input {
@@ -71,19 +74,21 @@
   .login-btn {
     width: 100%; background: var(--accent); color: var(--accent-contrast); border: none; padding: 12px;
     border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 8px;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
   }
+  .login-btn:hover { filter: brightness(1.08); box-shadow: var(--shadow); }
   .login-error { color: var(--down); font-size: 0.85rem; margin-top: 12px; text-align: center; }
 
-  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; text-align: center; }
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; text-align: center; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease; }
   .hero-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; }
   .hero-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 2.6rem; font-weight: 700; color: var(--heading); }
   .sub-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-  .sub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+  .sub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease; }
   .sub-label { color: var(--muted); font-size: 0.75rem; margin-bottom: 6px; }
   .sub-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: 600; }
   .up { color: var(--up); }
   .down { color: var(--down); }
-  .symbols-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .symbols-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease; }
   .symbols-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 12px; }
   .symbol-pills { display: flex; flex-wrap: wrap; gap: 8px; }
   .pill { background: var(--surface-alt); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
