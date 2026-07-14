@@ -31,14 +31,14 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      const { date, totalFundEquity, totalValue, cash } = req.body || {};
+      const { date, totalFundEquity, totalValue, cash, totalCapital } = req.body || {};
       if (!date || typeof totalFundEquity !== "number") {
         res.status(400).json({ error: "date and totalFundEquity are required" });
         return;
       }
       const existing = (await redis.get("snapshots")) || [];
       const withoutToday = existing.filter((s) => s.date !== date);
-      const updated = [...withoutToday, { date, totalFundEquity, totalValue, cash }].sort((a, b) =>
+      const updated = [...withoutToday, { date, totalFundEquity, totalValue, cash, totalCapital }].sort((a, b) =>
         a.date.localeCompare(b.date)
       );
       await redis.set("snapshots", updated);

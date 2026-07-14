@@ -27,11 +27,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const [holdings, investors, closedPositions, messages] = await Promise.all([
+    const [holdings, investors, closedPositions, messages, snapshots] = await Promise.all([
       redis.get("holdings:default"),
       redis.get("investors"),
       redis.get("closedPositions"),
       redis.get("messages"),
+      redis.get("snapshots"),
     ]);
     const investorList = investors || [];
     const investor = investorList.find(
@@ -56,8 +57,19 @@ module.exports = async function handler(req, res) {
       .filter((m) => m.recipientType === "all" || m.recipientId === investor.id)
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
+    // Approximate historical value: applies each day's recorded fund-wide return to
+    // this investor's current total contribution. Older snapshots recorded before
+    // totalCapital was tracked per-day fall back to today's total capital as an
+    // approximation — a known simplification, same spirit as the live calculation.
+    const myContributed = totalContributed(investor);
+    const assetHistory = (snapshots || []).map((s) => {
+      const capitalAtSnapshot = typeof s.totalCapital === "number" && s.totalCapital > 0 ? s.totalCapital : totalCapital;
+      const returnPct = capitalAtSnapshot > 0 ? (s.totalFundEquity - capitalAtSnapshot) / capitalAtSnapshot : 0;
+      return { date: s.date, value: myContributed * (1 + returnPct) };
+    });
+
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ ...summary, messages: myMessages });
+    res.status(200).json({ ...summary, messages: myMessages, assetHistory });
   } catch (e) {
     res.status(500).json({ error: `Could not compute view: ${e.message}` });
   }

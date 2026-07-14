@@ -373,6 +373,32 @@
 <script>
 // Keys now live server-side in /api/prices — nothing secret in this file.
 
+function showChartTooltip(evt, dateStr, valueText) {
+  evt.stopPropagation();
+  let tip = document.getElementById('chartTooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'chartTooltip';
+    tip.style.cssText = 'position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text); pointer-events:none; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.3); white-space:nowrap;';
+    document.body.appendChild(tip);
+  }
+  const point = evt.touches && evt.touches[0] ? evt.touches[0] : evt;
+  tip.textContent = `${dateStr}: RM ${valueText}`;
+  tip.style.display = 'block';
+  const tipWidth = tip.offsetWidth || 120;
+  let left = point.clientX + 12;
+  if (left + tipWidth > window.innerWidth - 8) left = point.clientX - tipWidth - 12;
+  tip.style.left = left + 'px';
+  tip.style.top = (point.clientY - 32) + 'px';
+  clearTimeout(window._chartTooltipTimer);
+  window._chartTooltipTimer = setTimeout(() => { tip.style.display = 'none'; }, 3000);
+}
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.closest && e.target.closest('.chart-hit')) return;
+  const tip = document.getElementById('chartTooltip');
+  if (tip) tip.style.display = 'none';
+});
+
 function setTheme(name) {
   document.body.className = 'theme-' + name;
   localStorage.setItem('dashboardTheme', name);
@@ -1329,10 +1355,10 @@ function recordTodaySnapshot() {
   fetch('/api/snapshot', {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ date: today, totalFundEquity, totalValue, cash }),
+    body: JSON.stringify({ date: today, totalFundEquity, totalValue, cash, totalCapital }),
   }).then(() => {
     const withoutToday = snapshotHistory.filter(s => s.date !== today);
-    snapshotHistory = [...withoutToday, { date: today, totalFundEquity, totalValue, cash }].sort((a, b) => a.date.localeCompare(b.date));
+    snapshotHistory = [...withoutToday, { date: today, totalFundEquity, totalValue, cash, totalCapital }].sort((a, b) => a.date.localeCompare(b.date));
     renderTrendChart();
   }).catch(e => console.error('Could not save snapshot:', e));
 }
@@ -1418,7 +1444,10 @@ function renderTrendChart() {
   const trendUp = values[values.length - 1] >= values[0];
   const lineColor = trendUp ? 'var(--up)' : 'var(--down)';
 
-  const circles = points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${lineColor}" />`).join('');
+  const circles = points.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3" fill="${lineColor}" />
+    <circle class="chart-hit" cx="${p.x}" cy="${p.y}" r="12" fill="transparent" style="cursor:pointer;" onclick="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" ontouchstart="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" />
+  `).join('');
 
   container.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">

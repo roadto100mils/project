@@ -112,6 +112,32 @@
   <div class="wrap" id="app" style="padding-top:12px;"></div>
 
 <script>
+function showChartTooltip(evt, dateStr, valueText) {
+  evt.stopPropagation();
+  let tip = document.getElementById('chartTooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'chartTooltip';
+    tip.style.cssText = 'position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text); pointer-events:none; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.3); white-space:nowrap;';
+    document.body.appendChild(tip);
+  }
+  const point = evt.touches && evt.touches[0] ? evt.touches[0] : evt;
+  tip.textContent = `${dateStr}: RM ${valueText}`;
+  tip.style.display = 'block';
+  const tipWidth = tip.offsetWidth || 120;
+  let left = point.clientX + 12;
+  if (left + tipWidth > window.innerWidth - 8) left = point.clientX - tipWidth - 12;
+  tip.style.left = left + 'px';
+  tip.style.top = (point.clientY - 32) + 'px';
+  clearTimeout(window._chartTooltipTimer);
+  window._chartTooltipTimer = setTimeout(() => { tip.style.display = 'none'; }, 3000);
+}
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.closest && e.target.closest('.chart-hit')) return;
+  const tip = document.getElementById('chartTooltip');
+  if (tip) tip.style.display = 'none';
+});
+
 function setTheme(name) {
   document.body.className = 'theme-' + name;
   localStorage.setItem('dashboardTheme', name);
@@ -220,6 +246,11 @@ function renderSummary(data) {
       </div>
     </div>
 
+    <div class="symbols-card" style="margin-bottom:24px;">
+      <div class="symbols-label">Your Asset Value Over Time</div>
+      <div id="assetChart" style="margin-top:10px;"></div>
+    </div>
+
     ${(data.guaranteeBreakdown && data.guaranteeBreakdown.length) ? `
     <div class="symbols-card" style="margin-bottom:24px;">
       <div class="symbols-label">Guaranteed Return (6% p.a.), by contribution</div>
@@ -265,6 +296,50 @@ function renderSummary(data) {
     <div class="footer-note">
       Not investment advice.
     </div>
+  `;
+  renderAssetChart(data.assetHistory || []);
+}
+
+function renderAssetChart(history) {
+  const container = document.getElementById('assetChart');
+  if (!container) return;
+  if (history.length < 2) {
+    container.innerHTML = '<div class="faint" style="text-align:center; padding:20px; font-size:0.8rem;">Not enough data yet — check back after a few days.</div>';
+    return;
+  }
+
+  const width = 480, height = 180, padding = 36;
+  const values = history.map(s => s.value);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+
+  const points = history.map((s, i) => {
+    const x = padding + (i / (history.length - 1)) * (width - padding * 2);
+    const y = height - padding - ((s.value - minV) / range) * (height - padding * 2);
+    return { x, y, date: s.date, value: s.value };
+  });
+
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  const firstDate = history[0].date;
+  const lastDate = history[history.length - 1].date;
+  const trendUp = values[values.length - 1] >= values[0];
+  const lineColor = trendUp ? 'var(--up)' : 'var(--down)';
+
+  const circles = points.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3" fill="${lineColor}" />
+    <circle class="chart-hit" cx="${p.x}" cy="${p.y}" r="12" fill="transparent" style="cursor:pointer;" onclick="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" ontouchstart="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" />
+  `).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <polyline points="${linePoints}" fill="none" stroke="${lineColor}" stroke-width="2" />
+      ${circles}
+      <text x="${padding}" y="${height - 8}" fill="var(--faint)" font-size="10" font-family="var(--font-mono)">${firstDate}</text>
+      <text x="${width - padding}" y="${height - 8}" fill="var(--faint)" font-size="10" font-family="var(--font-mono)" text-anchor="end">${lastDate}</text>
+      <text x="${padding}" y="14" fill="var(--muted)" font-size="10" font-family="var(--font-mono)">RM ${fmt(maxV)}</text>
+      <text x="${padding}" y="${height - padding + 12}" fill="var(--muted)" font-size="10" font-family="var(--font-mono)">RM ${fmt(minV)}</text>
+    </svg>
   `;
 }
 
