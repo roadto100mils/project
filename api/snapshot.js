@@ -49,5 +49,24 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (req.method === "DELETE") {
+    try {
+      const { date } = req.body || {};
+      if (date) {
+        // Delete one specific data point
+        const existing = (await redis.get("snapshots")) || [];
+        const updated = existing.filter((s) => s.date !== date);
+        await redis.set("snapshots", updated);
+      } else {
+        // No date given: clear everything
+        await redis.set("snapshots", []);
+      }
+      res.status(200).json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: `Could not delete snapshot(s): ${e.message}` });
+    }
+    return;
+  }
+
   res.status(405).json({ error: "Method not allowed" });
 };

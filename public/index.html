@@ -214,8 +214,15 @@
 
   <div style="margin-bottom:32px;">
     <div class="eyebrow">Trend</div>
-    <h1 style="font-size:1.2rem; margin-bottom:12px;">Total Fund Equity Over Time</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <h1 style="font-size:1.2rem; margin:0;">Total Fund Equity Over Time</h1>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" style="font-size:0.75rem; padding:5px 10px;" onclick="toggleSnapshotManager()">Manage Data Points</button>
+        <button class="btn" style="font-size:0.75rem; padding:5px 10px;" onclick="clearSnapshots()">Clear All</button>
+      </div>
+    </div>
     <div id="trendChart" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;"></div>
+    <div id="snapshotManager" style="display:none; margin-top:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px;"></div>
   </div>
 
   <div class="faint mono" style="font-size:0.75rem; margin-bottom:4px;" id="lastUpdated"></div>
@@ -1328,6 +1335,62 @@ function recordTodaySnapshot() {
     snapshotHistory = [...withoutToday, { date: today, totalFundEquity, totalValue, cash }].sort((a, b) => a.date.localeCompare(b.date));
     renderTrendChart();
   }).catch(e => console.error('Could not save snapshot:', e));
+}
+
+function clearSnapshots() {
+  if (snapshotHistory.length === 0) return;
+  const confirmed = confirm(`Clear all ${snapshotHistory.length} recorded trend data point(s)? This cannot be undone — the chart will start fresh from today.`);
+  if (!confirmed) return;
+  fetch('/api/snapshot', {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  }).then(() => {
+    snapshotHistory = [];
+    renderTrendChart();
+    renderSnapshotManager();
+    setTimeout(recordTodaySnapshot, 500);
+  }).catch(e => console.error('Could not clear snapshots:', e));
+}
+
+function toggleSnapshotManager() {
+  const el = document.getElementById('snapshotManager');
+  if (!el) return;
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  if (!showing) renderSnapshotManager();
+}
+
+function renderSnapshotManager() {
+  const el = document.getElementById('snapshotManager');
+  if (!el) return;
+  if (snapshotHistory.length === 0) {
+    el.innerHTML = '<div class="faint" style="font-size:0.8rem;">No data points recorded yet.</div>';
+    return;
+  }
+  const sorted = [...snapshotHistory].sort((a, b) => b.date.localeCompare(a.date));
+  el.innerHTML = sorted.map(s => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span class="mono" style="font-size:0.8rem;">${s.date}</span>
+      <span class="mono" style="font-size:0.85rem;">RM ${fmt(s.totalFundEquity)}</span>
+      <button class="btn" style="font-size:0.7rem; padding:3px 8px; color:var(--down);" onclick="deleteSnapshot('${s.date}')">Delete</button>
+    </div>
+  `).join('');
+}
+
+function deleteSnapshot(date) {
+  const confirmed = confirm(`Delete the data point for ${date}? This cannot be undone.`);
+  if (!confirmed) return;
+  fetch('/api/snapshot', {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ date }),
+  }).then(() => {
+    snapshotHistory = snapshotHistory.filter(s => s.date !== date);
+    renderTrendChart();
+    renderSnapshotManager();
+  }).catch(e => console.error('Could not delete snapshot:', e));
+}
 }
 
 function renderTrendChart() {
