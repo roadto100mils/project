@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>My Investment</title>
+<title>SFUND CAPITAL — My Investment</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -42,6 +42,9 @@
     --font-mono: 'Inter', sans-serif;
   }
   .theme-switcher { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+  .logo-navy, .logo-white { display: none; height: 24px; width: auto; }
+  body.theme-light .logo-navy { display: inline-block; }
+  body.theme-dark .logo-white { display: inline-block; }
   .theme-switcher button {
     background: var(--surface); border: 1px solid var(--border); color: var(--muted);
     font-size: 0.7rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-family: var(--font-heading);
@@ -163,7 +166,10 @@ const fmt = (n) => new Intl.NumberFormat('en-MY', { minimumFractionDigits: 2, ma
 function renderLogin(errorMsg) {
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="eyebrow">Investment Portal</div>
+    <div style="margin-bottom:8px;">
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" />
+    </div>
     <h1>Sign In</h1>
     <div class="login-card">
       <div class="field">

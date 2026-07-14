@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Portfolio Ledger</title>
+<title>SFUND CAPITAL</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -44,6 +44,9 @@
   }
 
   .theme-switcher { display: flex; gap: 6px; }
+  .logo-navy, .logo-white { display: none; height: 26px; width: auto; }
+  body.theme-light .logo-navy { display: inline-block; }
+  body.theme-dark .logo-white { display: inline-block; }
   .theme-switcher button {
     background: var(--surface); border: 1px solid var(--border); color: var(--muted);
     font-size: 0.7rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-family: var(--font-heading);
@@ -145,7 +148,10 @@
 
 <div id="adminGate" style="display:none; min-height:100vh; align-items:center; justify-content:center; flex-direction:column;">
   <div style="max-width:360px; width:100%; padding:24px;">
-    <div class="eyebrow" style="text-align:center;">Portfolio Ledger</div>
+    <div style="text-align:center; margin-bottom:8px;">
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" />
+    </div>
     <h1 style="font-size:1.6rem; text-align:center; margin-bottom:24px;">Admin Sign In</h1>
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:var(--shadow);">
       <label style="display:block; color:var(--muted); font-size:0.85rem; margin-bottom:8px;">Password</label>
@@ -166,7 +172,8 @@
 <div class="wrap">
   <div class="header">
     <div>
-      <div class="eyebrow">Portfolio Ledger</div>
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" style="margin-bottom:8px;" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" style="margin-bottom:8px;" />
       <h1>Total Asset Value</h1>
       <div class="faint mono" id="todayDate" style="font-size:0.8rem; margin-top:4px;"></div>
     </div>
