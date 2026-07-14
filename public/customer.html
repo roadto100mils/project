@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>My Investment</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-  :root, body.theme-terminal {
+  :root, body.theme-dark {
     --bg: #0B0E14;
     --surface: #12161F;
     --surface-alt: #0D1119;
@@ -20,26 +20,10 @@
     --accent-contrast: #12161F;
     --up: #6FCF97;
     --down: #EB5757;
-    --font-heading: 'Space Grotesk', sans-serif;
+    --font-heading: 'Inter', sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
   }
-  body.theme-ledger {
-    --bg: #F6F2E9;
-    --surface: #FFFFFF;
-    --surface-alt: #EFE8D8;
-    --border: #E0D6BE;
-    --text: #2E2B24;
-    --heading: #1E2A22;
-    --muted: #746C5B;
-    --faint: #A79C82;
-    --accent: #A47C3B;
-    --accent-contrast: #FFFFFF;
-    --up: #2E7D4F;
-    --down: #B23A2E;
-    --font-heading: 'Fraunces', serif;
-    --font-mono: 'IBM Plex Mono', monospace;
-  }
-  body.theme-minimal {
+  body.theme-light {
     --bg: #F7F8FA;
     --surface: #FFFFFF;
     --surface-alt: #F0F2F5;
@@ -121,9 +105,8 @@
 <body>
   <div style="max-width:480px; margin:0 auto; padding-top:24px;">
     <div class="theme-switcher" id="themeSwitcher">
-      <button onclick="setTheme('terminal')" data-theme-btn="terminal">Terminal</button>
-      <button onclick="setTheme('ledger')" data-theme-btn="ledger">Ledger</button>
-      <button onclick="setTheme('minimal')" data-theme-btn="minimal">Minimal</button>
+      <button onclick="setTheme('dark')" data-theme-btn="dark">Dark</button>
+      <button onclick="setTheme('light')" data-theme-btn="light">Light</button>
     </div>
   </div>
   <div class="wrap" id="app" style="padding-top:12px;"></div>
@@ -137,7 +120,7 @@ function setTheme(name) {
   });
 }
 (function initTheme() {
-  const saved = localStorage.getItem('dashboardTheme') || 'terminal';
+  const saved = localStorage.getItem('dashboardTheme') || 'dark';
   document.body.className = 'theme-' + saved;
   document.querySelectorAll('[data-theme-btn]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.themeBtn === saved);
