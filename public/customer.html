@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <title>SFUND CAPITAL — My Investment</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -237,6 +240,10 @@ function renderSummary(data) {
 
   app.innerHTML = `
     <button class="logout-btn" onclick="logout()">Sign out</button>
+    <div style="margin-bottom:8px;">
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" style="height:22px;" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" style="height:22px;" />
+    </div>
     <div class="eyebrow">Investment Summary</div>
     <h1>Welcome, ${data.name}</h1>
     <div class="faint mono" style="font-size:0.8rem; margin-top:-24px; margin-bottom:24px;">${todayStr}</div>
