@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<title>SFUND CAPITAL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  :root, body.theme-dark {
+    --bg: #0B0E14;
+    --surface: #12161F;
+    --surface-alt: #0D1119;
+    --border: #232838;
+    --text: #E8E6DF;
+    --heading: #F4F2ED;
+    --muted: #8A8F9E;
+    --faint: #5C6270;
+    --accent: #D4A657;
+    --accent-contrast: #12161F;
+    --up: #6FCF97;
+    --down: #EB5757;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --font-heading: 'Inter', sans-serif;
+    --font-mono: 'Inter', sans-serif;
+  }
+
+  body.theme-light {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface-alt: #F0F2F5;
+    --border: #E2E5EA;
+    --text: #1F2430;
+    --heading: #10131C;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --accent: #3654E0;
+    --accent-contrast: #FFFFFF;
+    --up: #16A34A;
+    --down: #DC2626;
+    --shadow: 0 2px 16px rgba(16, 19, 28, 0.07);
+    --font-heading: 'Inter', sans-serif;
+    --font-mono: 'Inter', sans-serif;
+  }
+
+  .theme-switcher { display: flex; gap: 6px; }
+  .logo-navy, .logo-white { display: none; height: 26px; width: auto; }
+  body.theme-light .logo-navy { display: inline-block; }
+  body.theme-dark .logo-white { display: inline-block; }
+  .theme-switcher button {
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    font-size: 0.7rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-family: var(--font-heading);
+  }
+  .theme-switcher button.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-heading);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .faint { color: var(--faint); }
+
+  .ticker-wrap {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 8px 0;
+  }
+  .ticker-track {
+    display: inline-flex;
+    animation: scroll 32s linear infinite;
+  }
+  .ticker-track:hover { animation-play-state: paused; }
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 16px;
+    font-size: 0.8rem;
+  }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 40px; }
+  .eyebrow { color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: 2rem; font-weight: 700; color: var(--heading); margin: 0; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted); transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease; }
+  .btn:hover { border-color: var(--accent); color: var(--text); }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-contrast); border: none; }
+  .btn-primary:hover { filter: brightness(1.08); box-shadow: var(--shadow); }
+  .btn-ghost { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+  .card-label { color: var(--muted); font-size: 0.8rem; margin-bottom: 8px; }
+  .card-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.9rem; font-weight: 600; color: var(--heading); }
+
+  .settings { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; display: none; box-shadow: var(--shadow); }
+  .settings.open { display: block; }
+  .settings input { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); padding: 4px 10px; border-radius: 6px; width: 90px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  thead th { text-align: left; background: var(--surface); color: var(--muted); font-weight: 500; padding: 12px 16px; }
+  thead th.num { text-align: right; }
+  tbody td { padding: 12px 16px; border-top: 1px solid var(--border); }
+  tbody tr { transition: background-color 0.12s ease; }
+  tbody tr:hover { background: var(--surface-alt); }
+  tbody td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .table-wrap { border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 16px; box-shadow: var(--shadow); transition: background-color 0.2s ease, border-color 0.2s ease; }
+  .table-wrap table { min-width: 640px; }
+  .edit-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 4px; width: 70px; font-family: inherit; }
+  input[type="date"].edit-input { width: 130px; }
+  .edit-input.wide { width: 120px; }
+  .row-actions button { border: none; background: var(--border); color: var(--muted); font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-right: 4px; }
+  .row-actions .del { background: transparent; color: var(--faint); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 12px; }
+    h1 { font-size: 1.4rem; }
+    .header { gap: 12px; margin-bottom: 24px; }
+    .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { padding: 16px; }
+    .card-value { font-size: 1.3rem; }
+    .btn { padding: 8px 12px; font-size: 0.85rem; }
+    .edit-input { font-size: 16px; padding: 6px 8px; width: 60px; }
+    .edit-input.wide { width: 90px; }
+    input[type="date"].edit-input { width: 128px; }
+    .ticker-item { font-size: 0.7rem; margin: 0 10px; }
+    table { font-size: 0.8rem; }
+    thead th { padding: 8px 10px; }
+    tbody td { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="adminGate" style="display:none; min-height:100vh; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="max-width:360px; width:100%; padding:24px;">
+    <div style="text-align:center; margin-bottom:8px;">
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" />
+    </div>
+    <h1 style="font-size:1.6rem; text-align:center; margin-bottom:24px;">Admin Sign In</h1>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:var(--shadow);">
+      <label style="display:block; color:var(--muted); font-size:0.85rem; margin-bottom:8px;">Password</label>
+      <div style="position:relative; margin-bottom:16px;">
+        <input type="password" id="adminPasswordInput" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:10px 40px 10px 12px; border-radius:8px; font-family:inherit; font-size:16px; box-sizing:border-box;" />
+        <button type="button" onclick="toggleAdminPwVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.75rem; padding:4px;">Show</button>
+      </div>
+      <button onclick="tryAdminLogin()" style="width:100%; background:var(--accent); color:var(--accent-contrast); border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer;">Sign In</button>
+      <div id="adminGateError" style="color:var(--down); font-size:0.85rem; margin-top:12px; text-align:center;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboardRoot" style="display:none;">
+
+<div class="ticker-wrap"><div class="ticker-track mono" id="ticker"></div></div>
+
+<div class="wrap">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:28px; box-shadow:var(--shadow);">
+    <div>
+      <img src="/logo-navy.png" alt="SFUND CAPITAL" class="logo-navy" style="height:36px;" />
+      <img src="/logo-white.png" alt="SFUND CAPITAL" class="logo-white" style="height:36px;" />
+    </div>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="theme-switcher" id="themeSwitcher">
+        <button onclick="setTheme('dark')" data-theme-btn="dark">Dark</button>
+        <button onclick="setTheme('light')" data-theme-btn="light">Light</button>
+      </div>
+      <button class="btn" onclick="toggleSettings()">⚙ Settings</button>
+      <button class="btn btn-primary" onclick="refreshPrices()">⟳ Refresh</button>
+    </div>
+  </div>
+
+  <div class="header" style="align-items:flex-start;">
+    <div>
+      <h1>Total Asset Value</h1>
+      <div class="faint mono" id="todayDate" style="font-size:0.8rem; margin-top:4px;"></div>
+    </div>
+  </div>
+
+  <div class="settings" id="settingsPanel">
+    <div class="muted" style="font-size:0.8rem; margin-bottom:12px;">Display settings</div>
+    <label style="display:flex; align-items:center; gap:12px; font-size:0.9rem;">
+      USD → MYR rate
+      <input type="number" step="0.0001" id="fxRate" value="4.70" oninput="render()" />
+      <span class="faint mono" id="fxLiveTag" style="font-size:0.7rem;"></span>
+    </label>
+    <p class="faint" style="font-size:0.7rem; margin-top:6px;">Auto-updates from Twelve Data on every refresh. Edit manually to override.</p>
+    <p class="faint" style="font-size:0.75rem; margin-top:12px;">
+      US prices come from Twelve Data, KLSE prices from iTick. If either shows an error in the status line below the totals, check the browser console (right-click → Inspect → Console) for the raw API response.
+    </p>
+    <div style="display:flex; align-items:center; gap:12px; font-size:0.9rem; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      Total Fund Capital (MYR)
+      <span class="mono" id="totalCapitalDisplay" style="color:var(--heading); font-weight:600;">RM 0.00</span>
+    </div>
+    <p class="faint" style="font-size:0.7rem; margin-top:6px;">
+      Auto-synced as the sum of all customers' contributed amounts below (Customers section). Cash further down is tracked as USD (converted at each contribution's own entry-time rate) and displayed at today's live rate — so it moves with the exchange rate, same as your USD holdings.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Value (MYR)</div>
+      <div class="card-value" id="totalValue">RM 0.00</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Unrealized Gain/Loss</div>
+      <div class="card-value" id="totalGain">RM 0.00</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Return (on total capital)</div>
+      <div class="card-value" id="totalReturn">0.00%</div>
+      <div class="faint mono" id="totalReturnNote" style="font-size:0.7rem; margin-top:4px;">includes FX movement</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Cash / Trading Limit</div>
+      <div class="card-value" id="cashBalance">RM 0.00</div>
+      <div class="faint mono" id="cashBalanceUsd" style="font-size:0.75rem; margin-top:4px;"></div>
+    </div>
+  </div>
+  <div class="mono" id="cashWarning" style="font-size:0.75rem; margin-bottom:16px; color:var(--down);"></div>
+
+  <div style="margin-bottom:32px;">
+    <div class="eyebrow">Trend</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <h1 style="font-size:1.2rem; margin:0;">Total Fund Equity Over Time</h1>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" style="font-size:0.75rem; padding:5px 10px;" onclick="toggleSnapshotManager()">Manage Data Points</button>
+        <button class="btn" style="font-size:0.75rem; padding:5px 10px;" onclick="clearSnapshots()">Clear All</button>
+      </div>
+    </div>
+    <div id="trendChart" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow);"></div>
+    <div id="snapshotManager" style="display:none; margin-top:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px;"></div>
+  </div>
+
+  <div class="faint mono" style="font-size:0.75rem; margin-bottom:4px;" id="lastUpdated"></div>
+  <div class="mono" style="font-size:0.75rem; margin-bottom:16px;" id="dataStatus"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Name</th>
+          <th class="num">Qty</th>
+          <th class="num">Avg Cost</th>
+          <th class="num">Price</th>
+          <th class="num">Value (MYR)</th>
+          <th class="num">Gain/Loss</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="holdingsBody"></tbody>
+    </table>
+  </div>
+
+  <button class="btn btn-ghost" onclick="addHolding()">+ Add holding</button>
+  <span class="faint mono" id="saveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
+
+  <div style="margin-top:56px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+      <h1 style="font-size:1.4rem; margin:0;">Closed Positions</h1>
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearHistory()">Clear All</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th class="num">Qty</th>
+            <th>Open Date</th>
+            <th>Last Added</th>
+            <th>Closed Date</th>
+            <th class="num">Realized P&amp;L</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:56px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+      <h1 style="font-size:1.4rem; margin:0;">Transaction History</h1>
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="clearTransactions()">Clear All</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th class="num">Qty</th>
+            <th class="num">Price</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="transactionsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:56px;">
+    <h1 style="font-size:1.4rem;">Investor Shares</h1>
+    <p class="faint" style="font-size:0.8rem; margin-top:8px; margin-bottom:20px;">
+      Each customer's value reflects their actual proportional share of the fund's performance. A 6% per annum guaranteed floor (compounded from their join date) is shown separately as a target/commitment — it doesn't change the value above. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th class="num">Total Contributed (MYR)</th>
+            <th class="num">Share</th>
+            <th class="num">Current Value</th>
+            <th>Username</th>
+            <th>Password</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="investorsBody"></tbody>
+      </table>
+    </div>
+    <p class="faint" style="font-size:0.75rem; margin-top:8px;">
+      All customers sign in at the same page: <span class="mono" id="customerPortalUrl"></span>.
+      Share each customer's username and password with them directly (e.g. via WhatsApp).
+    </p>
+    <button class="btn btn-ghost" onclick="addInvestor()">+ Add customer</button>
+    <span class="faint mono" id="investorSaveStatus" style="font-size:0.75rem; margin-left:12px;"></span>
+  </div>
+
+  <div style="margin-top:56px;">
+    <h1 style="font-size:1.4rem;">Updates</h1>
+    <p class="faint" style="font-size:0.8rem; margin-top:8px; margin-bottom:20px;">
+      Send an announcement to all customers, or a private message to one. Optional attachment (image/file, keep it under ~3MB).
+    </p>
+
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:var(--shadow);">
+      <label style="display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:0.85rem; color:var(--muted);">
+        Send to
+        <select id="messageRecipient" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:8px; font-family:inherit; font-size:0.85rem; min-width:220px;">
+          <option value="all">All customers (announcement)</option>
+        </select>
+      </label>
+      <textarea id="messageText" placeholder="Write your update…" rows="3" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; font-family:inherit; font-size:0.9rem; box-sizing:border-box; resize:vertical;"></textarea>
+      <div style="display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;">
+        <input type="file" id="messageFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="font-size:0.8rem; color:var(--muted);" />
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        <span class="faint mono" id="messageSendStatus" style="font-size:0.75rem;"></span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>To</th>
+            <th>Message</th>
+            <th>Attachment</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="messagesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="faint" style="font-size:0.75rem; margin-top:40px; padding-top:24px;">
+    Prices in this prototype are simulated for demonstration. Not investment advice.
+  </div>
+</div>
+
+</div>
+
+<script>
+// Keys now live server-side in /api/prices — nothing secret in this file.
+
+function showChartTooltip(evt, dateStr, valueText) {
+  evt.stopPropagation();
+  let tip = document.getElementById('chartTooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'chartTooltip';
+    tip.style.cssText = 'position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text); pointer-events:none; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.3); white-space:nowrap;';
+    document.body.appendChild(tip);
+  }
+  const point = evt.touches && evt.touches[0] ? evt.touches[0] : evt;
+  tip.textContent = `${dateStr}: RM ${valueText}`;
+  tip.style.display = 'block';
+  const tipWidth = tip.offsetWidth || 120;
+  let left = point.clientX + 12;
+  if (left + tipWidth > window.innerWidth - 8) left = point.clientX - tipWidth - 12;
+  tip.style.left = left + 'px';
+  tip.style.top = (point.clientY - 32) + 'px';
+  clearTimeout(window._chartTooltipTimer);
+  window._chartTooltipTimer = setTimeout(() => { tip.style.display = 'none'; }, 3000);
+}
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.closest && e.target.closest('.chart-hit')) return;
+  const tip = document.getElementById('chartTooltip');
+  if (tip) tip.style.display = 'none';
+});
+
+function setTheme(name) {
+  document.body.className = 'theme-' + name;
+  localStorage.setItem('dashboardTheme', name);
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === name);
+  });
+}
+(function initTheme() {
+  const saved = localStorage.getItem('dashboardTheme') || 'dark';
+  document.body.className = 'theme-' + saved;
+  document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeBtn === saved);
+  });
+})();
+
+const seedHoldings = [
+  { id: 1, exchange: "KLSE", symbol: "MAYBANK", name: "Malayan Banking Bhd", qty: 2000, avgCost: 9.60, price: 10.42, currency: "MYR" },
+  { id: 2, exchange: "KLSE", symbol: "TENAGA", name: "Tenaga Nasional Bhd", qty: 1000, avgCost: 13.80, price: 14.55, currency: "MYR" },
+  { id: 3, exchange: "KLSE", symbol: "PBBANK", name: "Public Bank Bhd", qty: 1500, avgCost: 4.30, price: 4.18, currency: "MYR" },
+  { id: 4, exchange: "US", symbol: "AAPL", name: "Apple Inc.", qty: 40, avgCost: 195.20, price: 213.50, currency: "USD" },
+  { id: 5, exchange: "US", symbol: "NVDA", name: "NVIDIA Corp.", qty: 25, avgCost: 128.40, price: 141.90, currency: "USD" },
+];
+let holdings = [];
+let holdingsLoaded = false;
+let totalCapital = 0;
+let editingId = null;
+let closingId = null;
+let addingId = null;
+let closedPositions = [];
+let transactions = [];
+let messages = [];
+let nextId = 1;
+let saveTimer = null;
+
+async function loadHoldings() {
+  try {
+    const res = await fetch('/api/holdings', { headers: authHeaders() });
+    const data = await res.json();
+    if (data.holdings !== null && data.holdings !== undefined) {
+      // Respect whatever was saved, including an intentionally empty array
+      // (e.g. after closing all positions) — only fall back to sample data
+      // when nothing has ever been saved (Redis returns null).
+      holdings = data.holdings;
+    } else {
+      holdings = seedHoldings;
+      await saveHoldingsNow(); // persist the starting sample data on first run
+    }
+  } catch (e) {
+    console.error('Could not load saved holdings, using sample data:', e);
+    holdings = seedHoldings;
+  }
+  nextId = Math.max(0, ...holdings.map(h => h.id)) + 1;
+  holdingsLoaded = true;
+}
+
+async function saveHoldingsNow() {
+  try {
+    const res = await fetch('/api/holdings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ holdings }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('Save failed:', err);
+      const debugStr = err.debug ? ` [${JSON.stringify(err.debug)}]` : '';
+      showSaveStatus(`Save failed: ${err.error || 'unknown error'}${debugStr}`, true);
+    } else {
+      showSaveStatus('Saved', false);
+    }
+  } catch (e) {
+    console.error('Save failed:', e);
+    showSaveStatus(`Save failed: ${e.message}`, true);
+  }
+}
+
+function saveHoldings() {
+  // Debounce so rapid edits don't fire a request per keystroke
+  clearTimeout(saveTimer);
+  showSaveStatus('Saving…', false);
+  saveTimer = setTimeout(saveHoldingsNow, 600);
+}
+
+function showSaveStatus(text, isError) {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? 'var(--down)' : 'var(--faint)';
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+function fxRate() { return parseFloat(document.getElementById('fxRate').value) || 0; }
+function toMYR(val, currency) { return currency === "USD" ? val * fxRate() : val; }
+
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('open');
+}
+
+function computeRows() {
+  return holdings.map(h => {
+    const valueMYR = toMYR(h.price * h.qty, h.currency);
+    const costMYR = toMYR(h.avgCost * h.qty, h.currency);
+    const gain = valueMYR - costMYR;
+    const gainPct = costMYR ? (gain / costMYR) * 100 : 0;
+    return Object.assign({}, h, { valueMYR, costMYR, gain, gainPct });
+  });
+}
+
+function render() {
+  if (!holdingsLoaded) {
+    const body = document.getElementById('holdingsBody');
+    if (body) body.innerHTML = '<tr><td colspan="8" class="faint" style="padding:24px 16px;">Loading your saved holdings…</td></tr>';
+    return;
+  }
+  const rows = computeRows();
+  const totalValue = rows.reduce((s, r) => s + r.valueMYR, 0);
+  const totalCost = rows.reduce((s, r) => s + r.costMYR, 0);
+  const totalGain = totalValue - totalCost; // unrealized gain on currently open positions only
+
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+  const overallGain = equity.totalFundEquity - equity.totalCapitalMYR;
+  const overallReturnPct = equity.totalCapitalMYR ? (overallGain / equity.totalCapitalMYR) * 100 : 0;
+
+  document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
+  window.currentTotalValue = totalValue;
+  window.currentTotalCost = totalCost;
+  const gainEl = document.getElementById('totalGain');
+  gainEl.textContent = (totalGain >= 0 ? '+' : '-') + 'RM ' + fmt(Math.abs(totalGain));
+  gainEl.style.color = totalGain >= 0 ? 'var(--up)' : 'var(--down)';
+  const retEl = document.getElementById('totalReturn');
+  retEl.textContent = (overallReturnPct >= 0 ? '+' : '') + overallReturnPct.toFixed(2) + '%';
+  retEl.style.color = overallReturnPct >= 0 ? 'var(--up)' : 'var(--down)';
+  retEl.title = `Based on total fund capital (RM ${fmt(equity.totalCapitalMYR)}) vs total fund equity (RM ${fmt(equity.totalFundEquity)}) — includes stock price movement, realized P&L, and USD/MYR exchange rate movement on both holdings and uninvested USD cash.`;
+
+  const cashEl = document.getElementById('cashBalance');
+  const cashWarnEl = document.getElementById('cashWarning');
+  const cashUsdEl = document.getElementById('cashBalanceUsd');
+  if (cashEl) {
+    const cash = equity.cashMYR;
+    if (cash < 0) {
+      cashEl.textContent = 'RM 0.00';
+      cashEl.style.color = 'var(--down)';
+      if (cashUsdEl) cashUsdEl.textContent = `USD ${fmt(equity.cashUSD)} (negative)`;
+      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available USD cash by RM ${fmt(Math.abs(cash))} (at today's exchange rate) — add/increase a customer's contribution or reduce holdings.`;
+    } else {
+      cashEl.textContent = 'RM ' + fmt(cash);
+      cashEl.style.color = 'var(--heading)';
+      if (cashUsdEl) cashUsdEl.textContent = `USD ${fmt(equity.cashUSD)} at today's rate`;
+      if (cashWarnEl) cashWarnEl.textContent = '';
+    }
+  }
+
+  renderInvestors();
+
+  // Ticker
+  const tickerItems = rows.concat(rows).map(r => {
+    const cls = r.gain >= 0 ? 'up' : 'down';
+    const sym = r.currency === 'USD' ? '$' : 'RM';
+    return `<span class="ticker-item"><span class="muted">${r.symbol}</span>
+      <span class="${cls}" style="margin:0 8px;">${sym}${fmt(r.price)}</span>
+      <span class="${cls}">${r.gain >= 0 ? '▲' : '▼'} ${Math.abs(r.gainPct).toFixed(1)}%</span></span>`;
+  }).join('');
+  document.getElementById('ticker').innerHTML = tickerItems;
+
+  // Table
+  const body = document.getElementById('holdingsBody');
+  body.innerHTML = rows.length === 0
+    ? '<tr><td colspan="8" class="faint" style="padding:24px 16px;">No open positions. Click "+ Add holding" to add one.</td></tr>'
+    : rows.map(r => {
+    const sym = r.currency === 'USD' ? '$' : 'RM';
+    const gainCls = r.gain >= 0 ? 'up' : 'down';
+    if (closingId === r.id) {
+      return `<tr>
+        <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+        <td class="muted">${r.name}</td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Qty to sell</div>
+          <input class="edit-input" type="number" id="exitQtyInput_${r.id}" value="${r.qty}" max="${r.qty}" />
+        </td>
+        <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
+        <td class="num" colspan="1">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Exit price</div>
+          <input class="edit-input" type="number" id="exitPriceInput_${r.id}" value="${r.price}" />
+        </td>
+        <td class="num mono" colspan="2">Realized P&amp;L calculated on confirm</td>
+        <td class="row-actions">
+          <button onclick="confirmClosePosition(${r.id})">Confirm</button>
+          <button class="del" onclick="cancelClosePosition()">Cancel</button>
+        </td>
+      </tr>`;
+    }
+    if (addingId === r.id) {
+      const today = new Date().toISOString().slice(0, 10);
+      return `<tr>
+        <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+        <td class="muted">${r.name}</td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Add qty</div>
+          <input class="edit-input" type="number" id="addQtyInput_${r.id}" />
+        </td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Current: ${sym}${fmt(r.avgCost)}</div>
+          <span class="faint" style="font-size:0.75rem;">avg cost</span>
+        </td>
+        <td class="num">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Buy price</div>
+          <input class="edit-input" type="number" id="addPriceInput_${r.id}" value="${r.price}" />
+        </td>
+        <td class="num" colspan="2">
+          <div class="faint" style="font-size:0.65rem; margin-bottom:2px;">Date</div>
+          <input class="edit-input" type="date" id="addDateInput_${r.id}" value="${today}" />
+          <span class="faint" style="font-size:0.7rem; margin-left:8px;">New avg cost calculated on confirm</span>
+        </td>
+        <td class="row-actions">
+          <button onclick="confirmAddPosition(${r.id})">Confirm</button>
+          <button class="del" onclick="cancelAddPosition()">Cancel</button>
+        </td>
+      </tr>`;
+    }
+    if (editingId === r.id) {
+      return `<tr>
+        <td>
+          <select class="edit-input" style="width:64px; margin-bottom:4px;" onchange="updateField(${r.id},'exchange',this.value)">
+            <option value="KLSE" ${r.exchange === 'KLSE' ? 'selected' : ''}>KLSE</option>
+            <option value="US" ${r.exchange === 'US' ? 'selected' : ''}>US</option>
+          </select>
+          <input class="edit-input" style="width:64px;" value="${r.symbol}" onchange="updateField(${r.id},'symbol',this.value)" />
+        </td>
+        <td><input class="edit-input wide" value="${r.name}" onchange="updateField(${r.id},'name',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.qty}" onchange="updateField(${r.id},'qty',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.avgCost}" onchange="updateField(${r.id},'avgCost',this.value)" /></td>
+        <td class="num"><input class="edit-input" type="number" value="${r.price}" onchange="updateField(${r.id},'price',this.value)" /></td>
+        <td class="num">RM ${fmt(r.valueMYR)}</td>
+        <td class="num ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
+        <td class="row-actions"><button onclick="doneEdit()">Done</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${r.exchange}</span>${r.symbol}</td>
+      <td class="muted">${r.name}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(r.qty)}</td>
+      <td class="num mono muted">${sym}${fmt(r.avgCost)}</td>
+      <td class="num mono">${sym}${fmt(r.price)}</td>
+      <td class="num mono">RM ${fmt(r.valueMYR)}</td>
+      <td class="num mono ${gainCls}">${r.gain >= 0 ? '+' : ''}${fmt(r.gain)} (${r.gainPct >= 0 ? '+' : ''}${r.gainPct.toFixed(1)}%)</td>
+      <td class="row-actions"><button onclick="editRow(${r.id})">Edit</button><button onclick="startAddPosition(${r.id})">Add</button><button onclick="startClosePosition(${r.id})">Close</button><button class="del" onclick="removeHolding(${r.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('lastUpdated').textContent = 'Last updated ' + new Date().toLocaleTimeString();
+}
+
+function updateField(id, field, value) {
+  holdings = holdings.map(h => {
+    if (h.id !== id) return h;
+    const numeric = ['qty', 'avgCost', 'price'].includes(field);
+    const updated = Object.assign({}, h, { [field]: numeric ? (parseFloat(value) || 0) : value });
+    if (field === 'exchange') updated.currency = value === 'US' ? 'USD' : 'MYR';
+    if (field === 'qty' || field === 'avgCost') updated.lastAddedDate = new Date().toISOString().slice(0, 10);
+    return updated;
+  });
+  saveHoldings();
+  render();
+  if (field === 'symbol' || field === 'exchange') fetchNameForSymbol(id);
+}
+
+async function fetchNameForSymbol(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h || !h.symbol) return;
+  try {
+    const res = await fetch(`/api/symbol-name?exchange=${encodeURIComponent(h.exchange)}&symbol=${encodeURIComponent(h.symbol)}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    console.log('Symbol name lookup response:', data);
+    if (data.name) {
+      holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { name: data.name }) : x);
+      saveHoldings();
+      render();
+    } else {
+      console.warn('No name found:', data.debug);
+    }
+  } catch (e) {
+    console.error('Could not auto-fetch name:', e);
+  }
+}
+
+function startClosePosition(id) { closingId = id; editingId = null; addingId = null; render(); }
+function cancelClosePosition() { closingId = null; render(); }
+function startAddPosition(id) { addingId = id; editingId = null; closingId = null; render(); }
+function cancelAddPosition() { addingId = null; render(); }
+
+async function loadClosedPositions() {
+  try {
+    const res = await fetch('/api/closed-positions', { headers: authHeaders() });
+    const data = await res.json();
+    closedPositions = data.closedPositions || [];
+  } catch (e) {
+    console.error('Could not load history:', e);
+    closedPositions = [];
+  }
+}
+
+function saveClosedPositions() {
+  fetch('/api/closed-positions', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ closedPositions }),
+  }).catch(e => console.error('Could not save history:', e));
+}
+
+async function loadTransactions() {
+  try {
+    const res = await fetch('/api/transactions', { headers: authHeaders() });
+    const data = await res.json();
+    transactions = data.transactions || [];
+  } catch (e) {
+    console.error('Could not load transactions:', e);
+    transactions = [];
+  }
+}
+
+function saveTransactions() {
+  fetch('/api/transactions', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ transactions }),
+  }).catch(e => console.error('Could not save transactions:', e));
+}
+
+function logTransaction(type, h, qty, price, date) {
+  transactions.push({
+    id: Date.now() + Math.random(),
+    type, // 'buy' or 'sell'
+    exchange: h.exchange,
+    symbol: h.symbol,
+    name: h.name,
+    qty,
+    price,
+    currency: h.currency,
+    date: date || new Date().toISOString().slice(0, 10),
+  });
+  saveTransactions();
+}
+
+function confirmAddPosition(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h) return;
+  const qtyInput = document.getElementById(`addQtyInput_${id}`);
+  const priceInput = document.getElementById(`addPriceInput_${id}`);
+  const dateInput = document.getElementById(`addDateInput_${id}`);
+  const addQty = parseFloat(qtyInput.value) || 0;
+  const addPrice = parseFloat(priceInput.value) || 0;
+  const addDate = dateInput.value || new Date().toISOString().slice(0, 10);
+
+  if (addQty <= 0) { alert('Enter a quantity greater than 0.'); return; }
+
+  const newQty = h.qty + addQty;
+  const newAvgCost = ((h.qty * h.avgCost) + (addQty * addPrice)) / newQty;
+
+  holdings = holdings.map(x => x.id === id ? Object.assign({}, x, {
+    qty: newQty,
+    avgCost: newAvgCost,
+    lastAddedDate: addDate,
+  }) : x);
+
+  logTransaction('buy', h, addQty, addPrice, addDate);
+  addingId = null;
+  saveHoldings();
+  render();
+  renderTransactions();
+}
+
+function confirmClosePosition(id) {
+  const h = holdings.find(x => x.id === id);
+  if (!h) return;
+  const priceInput = document.getElementById(`exitPriceInput_${id}`);
+  const qtyInput = document.getElementById(`exitQtyInput_${id}`);
+  const exitPrice = parseFloat(priceInput.value) || 0;
+  let exitQty = parseFloat(qtyInput.value) || 0;
+  if (exitQty <= 0) { alert('Enter a quantity greater than 0.'); return; }
+  if (exitQty > h.qty) exitQty = h.qty; // can't sell more than you hold
+
+  const entryCostMYR = toMYR(h.avgCost * exitQty, h.currency);
+  const exitValueMYR = toMYR(exitPrice * exitQty, h.currency);
+  const realizedPnL = exitValueMYR - entryCostMYR;
+  const closeDate = new Date().toISOString().slice(0, 10);
+
+  closedPositions.push({
+    id: Date.now(),
+    exchange: h.exchange,
+    symbol: h.symbol,
+    name: h.name,
+    qty: exitQty,
+    currency: h.currency,
+    avgCost: h.avgCost,
+    exitPrice,
+    openDate: h.openDate || null,
+    lastAddedDate: h.lastAddedDate || null,
+    closedDate: closeDate,
+    realizedPnL,
+  });
+
+  logTransaction('sell', h, exitQty, exitPrice, closeDate);
+
+  if (exitQty >= h.qty) {
+    holdings = holdings.filter(x => x.id !== id);
+  } else {
+    holdings = holdings.map(x => x.id === id ? Object.assign({}, x, { qty: x.qty - exitQty }) : x);
+  }
+
+  closingId = null;
+  saveHoldings();
+  saveClosedPositions();
+  render();
+  renderHistory();
+  renderTransactions();
+}
+
+function clearHistory() {
+  if (closedPositions.length === 0) return;
+  const confirmed = confirm(`Clear all ${closedPositions.length} closed position record(s)? This also removes them from the Return calculation and cannot be undone.`);
+  if (!confirmed) return;
+  closedPositions = [];
+  saveClosedPositions();
+  renderHistory();
+  render();
+}
+
+function deleteHistoryEntry(id) {
+  const entry = closedPositions.find(p => p.id === id);
+  if (!entry) return;
+  const confirmed = confirm(`Delete this record (${entry.symbol}, closed ${entry.closedDate})? This removes its realized P&L from the Return calculation and cannot be undone.`);
+  if (!confirmed) return;
+  closedPositions = closedPositions.filter(p => p.id !== id);
+  saveClosedPositions();
+  renderHistory();
+  render();
+}
+
+function renderHistory() {
+  const body = document.getElementById('historyBody');
+  if (!body) return;
+  if (closedPositions.length === 0) {
+    body.innerHTML = '<tr><td colspan="8" class="faint" style="padding:16px;">No closed positions yet.</td></tr>';
+    return;
+  }
+  const sorted = [...closedPositions].sort((a, b) => (b.closedDate || '').localeCompare(a.closedDate || ''));
+  body.innerHTML = sorted.map(p => {
+    const pnlCls = p.realizedPnL >= 0 ? 'up' : 'down';
+    const sym = p.currency === 'USD' ? '$' : 'RM';
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${p.exchange}</span>${p.symbol}</td>
+      <td class="muted">${p.name || ''}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(p.qty)}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.openDate || '—'}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.lastAddedDate || '—'}</td>
+      <td class="mono" style="font-size:0.8rem;">${p.closedDate || '—'}</td>
+      <td class="num mono ${pnlCls}">${p.realizedPnL >= 0 ? '+' : ''}RM ${fmt(p.realizedPnL)}</td>
+      <td class="row-actions"><button class="del" onclick="deleteHistoryEntry(${p.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function clearTransactions() {
+  if (transactions.length === 0) return;
+  const confirmed = confirm(`Clear all ${transactions.length} transaction record(s)? This cannot be undone.`);
+  if (!confirmed) return;
+  transactions = [];
+  saveTransactions();
+  renderTransactions();
+}
+
+function deleteTransaction(id) {
+  const entry = transactions.find(t => t.id === id);
+  if (!entry) return;
+  const confirmed = confirm(`Delete this transaction (${entry.type} ${entry.symbol}, ${entry.date})? This cannot be undone.`);
+  if (!confirmed) return;
+  transactions = transactions.filter(t => t.id !== id);
+  saveTransactions();
+  renderTransactions();
+}
+
+function renderTransactions() {
+  const body = document.getElementById('transactionsBody');
+  if (!body) return;
+  if (transactions.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" class="faint" style="padding:16px;">No transactions yet.</td></tr>';
+    return;
+  }
+  const sorted = [...transactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  body.innerHTML = sorted.map(t => {
+    const sym = t.currency === 'USD' ? '$' : 'RM';
+    const typeCls = t.type === 'buy' ? 'up' : 'down';
+    return `<tr>
+      <td class="mono"><span class="faint" style="font-size:0.7rem; margin-right:4px;">${t.exchange}</span>${t.symbol}</td>
+      <td class="muted">${t.name || ''}</td>
+      <td class="mono ${typeCls}" style="text-transform:uppercase; font-size:0.8rem;">${t.type}</td>
+      <td class="num mono">${new Intl.NumberFormat('en-MY').format(t.qty)}</td>
+      <td class="num mono">${sym}${fmt(t.price)}</td>
+      <td class="mono" style="font-size:0.8rem;">${t.date}</td>
+      <td class="row-actions"><button class="del" onclick="deleteTransaction(${t.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function editRow(id) { editingId = id; closingId = null; addingId = null; render(); }
+function doneEdit() {
+  const h = holdings.find(x => x.id === editingId);
+  if (h && h.pendingInitialLog && h.symbol && h.qty > 0) {
+    logTransaction('buy', h, h.qty, h.avgCost, h.openDate);
+    holdings = holdings.map(x => x.id === h.id ? Object.assign({}, x, { pendingInitialLog: false }) : x);
+    saveHoldings();
+    renderTransactions();
+  }
+  editingId = null;
+  render();
+}
+function removeHolding(id) { holdings = holdings.filter(h => h.id !== id); saveHoldings(); render(); }
+function addHolding() {
+  const id = nextId++;
+  const today = new Date().toISOString().slice(0, 10);
+  holdings.push({ id, exchange: 'KLSE', symbol: '', name: '', qty: 100, avgCost: 1, price: 1, currency: 'MYR', openDate: today, lastAddedDate: today, pendingInitialLog: true });
+  editingId = id;
+  saveHoldings();
+  render();
+}
+async function refreshPrices() {
+  const usSymbols = holdings.filter(h => h.exchange === 'US').map(h => h.symbol);
+  const klseSymbols = holdings.filter(h => h.exchange === 'KLSE').map(h => h.symbol);
+
+  let data = { us: {}, usNames: {}, klse: {}, fx: null, errors: [] };
+  try {
+    const url = `/api/prices?us=${encodeURIComponent(usSymbols.join(','))}&klse=${encodeURIComponent(klseSymbols.join(','))}`;
+    const res = await fetch(url);
+    data = await res.json();
+    console.log('Backend response:', data);
+  } catch (e) {
+    data.errors.push(`Could not reach backend: ${e.message}`);
+    console.error(e);
+  }
+
+  let usLiveCount = 0;
+  let klseLiveCount = 0;
+  holdings = holdings.map(h => {
+    if (h.exchange === 'KLSE') {
+      const updated = Object.assign({}, h);
+      if (data.klse[h.symbol] !== undefined) { klseLiveCount++; updated.price = data.klse[h.symbol]; }
+      return updated;
+    }
+    const updated = Object.assign({}, h);
+    if (data.us[h.symbol] !== undefined) { usLiveCount++; updated.price = data.us[h.symbol]; }
+    if (!h.name && data.usNames && data.usNames[h.symbol]) updated.name = data.usNames[h.symbol];
+    return updated;
+  });
+
+  if (data.fx) {
+    document.getElementById('fxRate').value = data.fx.toFixed(4);
+    const tag = document.getElementById('fxLiveTag');
+    if (tag) { tag.textContent = 'live'; tag.style.color = 'var(--up)'; }
+  }
+
+  const statusEl = document.getElementById('dataStatus');
+  if (statusEl) {
+    const parts = [`${usLiveCount}/${usSymbols.length} US live`, `${klseLiveCount}/${klseSymbols.length} KLSE live`];
+    if (data.errors.length) parts.push(data.errors.join('; '));
+    statusEl.textContent = parts.join(' | ');
+    statusEl.style.color = data.errors.length ? 'var(--down)' : 'var(--muted)';
+  }
+
+  render();
+}
+
+let investors = [];
+let investorNextId = 1;
+let investorSaveTimer = null;
+let expandedInvestorId = null;
+let contribNextId = 1;
+
+function getInvestorContributions(inv) {
+  if (Array.isArray(inv.contributions) && inv.contributions.length) {
+    return inv.contributions;
+  }
+  // Migrate legacy single contributed+joinDate record into the new lot format
+  if (inv.contributed) {
+    return [{ id: 1, amount: inv.contributed, date: inv.joinDate || null }];
+  }
+  return [];
+}
+
+function investorTotalContributed(inv) {
+  return getInvestorContributions(inv).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+}
+
+function investorGuaranteedValue(inv) {
+  return getInvestorContributions(inv).reduce((s, c) => {
+    const years = yearsSince(c.date);
+    return s + (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+  }, 0);
+}
+
+// Mirrors api/_lib/fundCalc.js — computes the fund's true equity in MYR, tracking
+// uninvested cash as USD (converted at each contribution's own entry-time rate,
+// displayed at today's live rate) so idle USD cash and US holdings both correctly
+// reflect exchange rate movement, not just stock price movement.
+function computeFundEquityClient(investorList, holdingsList, closedPositionsList, liveFxRate) {
+  let totalCapitalMYR = 0;
+  let totalContributedUSD = 0;
+  for (const inv of investorList) {
+    for (const c of getInvestorContributions(inv)) {
+      const amount = parseFloat(c.amount) || 0;
+      totalCapitalMYR += amount;
+      const entryRate = c.fxRateAtEntry || liveFxRate;
+      totalContributedUSD += entryRate > 0 ? amount / entryRate : 0;
+    }
+  }
+
+  let openCostUSD = 0;
+  let openValueMYR = 0;
+  for (const h of holdingsList) {
+    if (h.exchange === 'US') {
+      openCostUSD += h.avgCost * h.qty;
+      openValueMYR += h.price * h.qty * liveFxRate;
+    } else {
+      openValueMYR += h.price * h.qty;
+    }
+  }
+
+  let realizedUSD = 0;
+  let realizedMYR_KLSE = 0;
+  for (const p of closedPositionsList) {
+    if (p.currency === 'USD') {
+      realizedUSD += (p.exitPrice - p.avgCost) * p.qty;
+    } else {
+      realizedMYR_KLSE += p.realizedPnL || 0;
+    }
+  }
+
+  const cashUSD = totalContributedUSD - openCostUSD + realizedUSD;
+  const cashMYR = cashUSD * liveFxRate;
+  const totalFundEquity = cashMYR + openValueMYR + realizedMYR_KLSE;
+
+  return { totalCapitalMYR, cashUSD, cashMYR, openValueMYR, totalFundEquity };
+}
+
+async function loadInvestors() {
+  try {
+    const res = await fetch('/api/investors', { headers: authHeaders() });
+    const data = await res.json();
+    investors = data.investors || [];
+  } catch (e) {
+    console.error('Could not load investors:', e);
+    investors = [];
+  }
+  // Migrate any legacy single contributed+joinDate investors to the multi-contribution format
+  investors = investors.map(inv => {
+    if (Array.isArray(inv.contributions)) return inv;
+    const contributions = getInvestorContributions(inv);
+    return Object.assign({}, inv, { contributions });
+  });
+  investorNextId = Math.max(0, ...investors.map(i => i.id || 0)) + 1;
+  const allContribIds = investors.flatMap(i => (i.contributions || []).map(c => c.id || 0));
+  contribNextId = Math.max(0, ...allContribIds) + 1;
+}
+
+function saveInvestorsNow() {
+  fetch('/api/investors', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ investors }),
+  }).then(async (res) => {
+    const el = document.getElementById('investorSaveStatus');
+    if (!res.ok) {
+      const err = await res.json();
+      if (el) { el.textContent = `Save failed: ${err.error}`; el.style.color = 'var(--down)'; }
+    } else if (el) {
+      el.textContent = 'Saved';
+      el.style.color = 'var(--faint)';
+    }
+  }).catch((e) => {
+    const el = document.getElementById('investorSaveStatus');
+    if (el) { el.textContent = `Save failed: ${e.message}`; el.style.color = 'var(--down)'; }
+  });
+}
+
+function saveInvestors() {
+  clearTimeout(investorSaveTimer);
+  const el = document.getElementById('investorSaveStatus');
+  if (el) { el.textContent = 'Saving…'; el.style.color = 'var(--faint)'; }
+  investorSaveTimer = setTimeout(saveInvestorsNow, 600);
+}
+
+const GUARANTEED_ANNUAL_RATE = 0.06;
+
+function yearsSince(dateStr) {
+  if (!dateStr) return 0;
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return 0;
+  return Math.max(0, (Date.now() - then) / (1000 * 60 * 60 * 24 * 365.25));
+}
+
+function renderInvestors() {
+  const body = document.getElementById('investorsBody');
+  if (!body) return;
+
+  const portalUrlEl = document.getElementById('customerPortalUrl');
+  if (portalUrlEl) portalUrlEl.textContent = `${window.location.origin}/customer.html`;
+
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+  const overallGainForInvestors = equity.totalFundEquity - equity.totalCapitalMYR;
+  const fundReturnPct = equity.totalCapitalMYR > 0 ? overallGainForInvestors / equity.totalCapitalMYR : 0;
+  const totalFundEquity = equity.totalFundEquity;
+
+  body.innerHTML = investors.map(inv => {
+    const contributed = investorTotalContributed(inv);
+    const actualValue = contributed * (1 + fundReturnPct);
+    const guaranteedValue = investorGuaranteedValue(inv);
+    const value = actualValue; // Current Value = actual performance only; guarantee shown separately
+    const share = totalFundEquity > 0 ? value / totalFundEquity : 0;
+    const belowGuarantee = guaranteedValue > actualValue;
+    const lots = getInvestorContributions(inv);
+    const isExpanded = expandedInvestorId === inv.id;
+
+    const mainRow = `<tr>
+      <td><input class="edit-input wide" value="${inv.name || ''}" onchange="updateInvestorField(${inv.id},'name',this.value)" /></td>
+      <td class="num mono">
+        RM ${fmt(contributed)}
+        <button class="btn" style="font-size:0.7rem; padding:2px 8px; margin-left:6px;" onclick="toggleInvestorLots(${inv.id})">${isExpanded ? 'Hide' : `Lots (${lots.length})`}</button>
+      </td>
+      <td class="num mono">${(share * 100).toFixed(1)}%</td>
+      <td class="num mono" title="${belowGuarantee ? `Below the 6% p.a. guarantee floor of RM ${fmt(guaranteedValue)} — you'll owe the difference at payout` : 'At or above the guaranteed floor'}">
+        RM ${fmt(value)}${belowGuarantee ? ' <span style="color:var(--down); font-size:0.7rem;">(below floor)</span>' : ''}
+      </td>
+      <td><input class="edit-input" value="${inv.username || ''}" onchange="updateInvestorField(${inv.id},'username',this.value)" /></td>
+      <td><input class="edit-input" value="${inv.password || ''}" onchange="updateInvestorField(${inv.id},'password',this.value)" /></td>
+      <td class="row-actions"><button class="del" onclick="removeInvestor(${inv.id})">✕</button></td>
+    </tr>`;
+
+    if (!isExpanded) return mainRow;
+
+    const lotsRows = lots.map(c => {
+      const years = yearsSince(c.date);
+      const lotGuaranteed = (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+      const entryRateText = c.fxRateAtEntry ? `@ ${c.fxRateAtEntry.toFixed(4)}` : '@ rate not recorded';
+      return `<tr style="background:var(--surface-alt);">
+        <td class="faint" style="padding-left:24px; font-size:0.8rem;">Lot</td>
+        <td class="num"><input class="edit-input" type="number" value="${c.amount}" onchange="updateContribution(${inv.id},${c.id},'amount',this.value)" /></td>
+        <td colspan="2">
+          <input class="edit-input" type="date" value="${c.date || ''}" onchange="updateContribution(${inv.id},${c.id},'date',this.value)" />
+          <span class="faint mono" style="font-size:0.7rem; margin-left:8px;" title="USD/MYR rate when this contribution was recorded — used to track FX exposure on that money">${entryRateText}</span>
+        </td>
+        <td colspan="2" class="faint mono" style="font-size:0.75rem;">guaranteed today: RM ${fmt(lotGuaranteed)}</td>
+        <td class="row-actions"><button class="del" onclick="removeContribution(${inv.id},${c.id})">✕</button></td>
+      </tr>`;
+    }).join('');
+
+    const addLotRow = `<tr style="background:var(--surface-alt);">
+      <td colspan="7" style="padding-left:24px;">
+        <button class="btn btn-ghost" style="font-size:0.75rem; padding:5px 10px;" onclick="addContribution(${inv.id})">+ Add contribution</button>
+      </td>
+    </tr>`;
+
+    return mainRow + lotsRows + addLotRow;
+  }).join('');
+  updateMessageRecipientOptions();
+}
+
+function toggleInvestorLots(id) {
+  expandedInvestorId = expandedInvestorId === id ? null : id;
+  renderInvestors();
+}
+
+function updateInvestorField(id, field, value) {
+  investors = investors.map(i => {
+    if (i.id !== id) return i;
+    return Object.assign({}, i, { [field]: value });
+  });
+  saveInvestors();
+  render();
+}
+
+function addContribution(investorId) {
+  const cid = contribNextId++;
+  const today = new Date().toISOString().slice(0, 10);
+  const entryRate = fxRate();
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i);
+    return Object.assign({}, i, { contributions: [...contributions, { id: cid, amount: 0, date: today, fxRateAtEntry: entryRate }] });
+  });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
+function updateContribution(investorId, contribId, field, value) {
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i).map(c =>
+      c.id === contribId ? Object.assign({}, c, { [field]: field === 'amount' ? (parseFloat(value) || 0) : value }) : c
+    );
+    return Object.assign({}, i, { contributions });
+  });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
+function removeContribution(investorId, contribId) {
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i).filter(c => c.id !== contribId);
+    return Object.assign({}, i, { contributions });
+  });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
+function removeInvestor(id) {
+  investors = investors.filter(i => i.id !== id);
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+function addInvestor() {
+  const id = investorNextId++;
+  const cid = contribNextId++;
+  const today = new Date().toISOString().slice(0, 10);
+  const entryRate = fxRate();
+  investors.push({ id, name: 'New Customer', contributions: [{ id: cid, amount: 0, date: today, fxRateAtEntry: entryRate }], username: `customer${id}`, password: '' });
+  saveInvestors();
+  syncTotalCapital();
+  render();
+}
+
+async function loadMessages() {
+  try {
+    const res = await fetch('/api/messages', { headers: authHeaders() });
+    const data = await res.json();
+    messages = data.messages || [];
+  } catch (e) {
+    console.error('Could not load messages:', e);
+    messages = [];
+  }
+}
+
+function saveMessagesNow() {
+  return fetch('/api/messages', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ messages }),
+  }).catch(e => console.error('Could not save messages:', e));
+}
+
+function updateMessageRecipientOptions() {
+  const select = document.getElementById('messageRecipient');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="all">All customers (announcement)</option>' +
+    investors.map(inv => `<option value="${inv.id}">${inv.name} (private)</option>`).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendMessage() {
+  const textEl = document.getElementById('messageText');
+  const fileEl = document.getElementById('messageFile');
+  const recipientEl = document.getElementById('messageRecipient');
+  const statusEl = document.getElementById('messageSendStatus');
+  const text = textEl.value.trim();
+  const recipientValue = recipientEl.value;
+  const file = fileEl.files[0];
+
+  if (!text && !file) {
+    statusEl.textContent = 'Write something or attach a file first.';
+    statusEl.style.color = 'var(--down)';
+    return;
+  }
+  if (file && file.size > 3 * 1024 * 1024) {
+    statusEl.textContent = 'File too large — keep attachments under 3MB.';
+    statusEl.style.color = 'var(--down)';
+    return;
+  }
+
+  statusEl.textContent = 'Sending…';
+  statusEl.style.color = 'var(--faint)';
+
+  let fileDataUrl = null, fileName = null;
+  if (file) {
+    try {
+      fileDataUrl = await fileToDataUrl(file);
+      fileName = file.name;
+    } catch (e) {
+      statusEl.textContent = `Could not read file: ${e.message}`;
+      statusEl.style.color = 'var(--down)';
+      return;
+    }
+  }
+
+  const recipientType = recipientValue === 'all' ? 'all' : 'specific';
+  const recipientId = recipientType === 'specific' ? parseInt(recipientValue, 10) : null;
+  const recipientName = recipientType === 'all' ? 'All customers' : (investors.find(i => i.id === recipientId)?.name || 'Unknown');
+
+  messages.push({
+    id: Date.now(),
+    text,
+    fileDataUrl,
+    fileName,
+    recipientType,
+    recipientId,
+    recipientName,
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  await saveMessagesNow();
+  textEl.value = '';
+  fileEl.value = '';
+  statusEl.textContent = 'Sent';
+  statusEl.style.color = 'var(--up)';
+  renderMessages();
+}
+
+function deleteMessage(id) {
+  const confirmed = confirm('Delete this message? This cannot be undone.');
+  if (!confirmed) return;
+  messages = messages.filter(m => m.id !== id);
+  saveMessagesNow();
+  renderMessages();
+}
+
+function renderMessages() {
+  const body = document.getElementById('messagesBody');
+  if (!body) return;
+  updateMessageRecipientOptions();
+  if (messages.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" class="faint" style="padding:16px;">No messages sent yet.</td></tr>';
+    return;
+  }
+  const sorted = [...messages].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  body.innerHTML = sorted.map(m => `<tr>
+    <td class="mono" style="font-size:0.8rem;">${m.date}</td>
+    <td class="muted" style="font-size:0.85rem;">${m.recipientName}</td>
+    <td style="font-size:0.85rem; max-width:300px;">${(m.text || '').replace(/</g, '&lt;')}</td>
+    <td style="font-size:0.8rem;">${m.fileDataUrl ? `<a href="${m.fileDataUrl}" download="${m.fileName}" style="color:var(--accent);">${m.fileName}</a>` : '—'}</td>
+    <td class="row-actions"><button class="del" onclick="deleteMessage(${m.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+function toggleAdminPwVisibility() {
+  const input = document.getElementById('adminPasswordInput');
+  const btn = event.target;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+  }
+}
+
+function syncTotalCapital() {
+  totalCapital = investors.reduce((s, i) => s + investorTotalContributed(i), 0);
+  const display = document.getElementById('totalCapitalDisplay');
+  if (display) display.textContent = 'RM ' + fmt(totalCapital);
+}
+
+let snapshotHistory = [];
+
+async function loadSnapshots() {
+  try {
+    const res = await fetch('/api/snapshot', { headers: authHeaders() });
+    const data = await res.json();
+    snapshotHistory = data.snapshots || [];
+  } catch (e) {
+    console.error('Could not load snapshots:', e);
+    snapshotHistory = [];
+  }
+}
+
+function recordTodaySnapshot() {
+  const today = new Date().toISOString().slice(0, 10);
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+  const totalValue = window.currentTotalValue || 0;
+  const totalFundEquity = equity.totalFundEquity;
+  const cash = equity.cashMYR;
+  const totalCapital = equity.totalCapitalMYR;
+
+  fetch('/api/snapshot', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ date: today, totalFundEquity, totalValue, cash, totalCapital }),
+  }).then(() => {
+    const withoutToday = snapshotHistory.filter(s => s.date !== today);
+    snapshotHistory = [...withoutToday, { date: today, totalFundEquity, totalValue, cash, totalCapital }].sort((a, b) => a.date.localeCompare(b.date));
+    renderTrendChart();
+  }).catch(e => console.error('Could not save snapshot:', e));
+}
+
+function clearSnapshots() {
+  if (snapshotHistory.length === 0) return;
+  const confirmed = confirm(`Clear all ${snapshotHistory.length} recorded trend data point(s)? This cannot be undone — the chart will start fresh from today.`);
+  if (!confirmed) return;
+  fetch('/api/snapshot', {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  }).then(() => {
+    snapshotHistory = [];
+    renderTrendChart();
+    renderSnapshotManager();
+    setTimeout(recordTodaySnapshot, 500);
+  }).catch(e => console.error('Could not clear snapshots:', e));
+}
+
+function toggleSnapshotManager() {
+  const el = document.getElementById('snapshotManager');
+  if (!el) return;
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  if (!showing) renderSnapshotManager();
+}
+
+function renderSnapshotManager() {
+  const el = document.getElementById('snapshotManager');
+  if (!el) return;
+  if (snapshotHistory.length === 0) {
+    el.innerHTML = '<div class="faint" style="font-size:0.8rem;">No data points recorded yet.</div>';
+    return;
+  }
+  const sorted = [...snapshotHistory].sort((a, b) => b.date.localeCompare(a.date));
+  el.innerHTML = sorted.map(s => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span class="mono" style="font-size:0.8rem;">${s.date}</span>
+      <span class="mono" style="font-size:0.85rem;">RM ${fmt(s.totalFundEquity)}</span>
+      <button class="btn" style="font-size:0.7rem; padding:3px 8px; color:var(--down);" onclick="deleteSnapshot('${s.date}')">Delete</button>
+    </div>
+  `).join('');
+}
+
+function deleteSnapshot(date) {
+  const confirmed = confirm(`Delete the data point for ${date}? This cannot be undone.`);
+  if (!confirmed) return;
+  fetch('/api/snapshot', {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ date }),
+  }).then(() => {
+    snapshotHistory = snapshotHistory.filter(s => s.date !== date);
+    renderTrendChart();
+    renderSnapshotManager();
+  }).catch(e => console.error('Could not delete snapshot:', e));
+}
+
+function renderTrendChart() {
+  const container = document.getElementById('trendChart');
+  if (!container) return;
+  if (snapshotHistory.length < 2) {
+    container.innerHTML = '<div class="faint" style="text-align:center; padding:24px; font-size:0.85rem;">Not enough data yet — check back after a few days of activity.</div>';
+    return;
+  }
+
+  const width = 900, height = 220, padding = 40;
+  const values = snapshotHistory.map(s => s.totalFundEquity);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+
+  const points = snapshotHistory.map((s, i) => {
+    const x = padding + (i / (snapshotHistory.length - 1)) * (width - padding * 2);
+    const y = height - padding - ((s.totalFundEquity - minV) / range) * (height - padding * 2);
+    return { x, y, date: s.date, value: s.totalFundEquity };
+  });
+
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  const firstDate = snapshotHistory[0].date;
+  const lastDate = snapshotHistory[snapshotHistory.length - 1].date;
+  const trendUp = values[values.length - 1] >= values[0];
+  const lineColor = trendUp ? 'var(--up)' : 'var(--down)';
+
+  const circles = points.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3" fill="${lineColor}" />
+    <circle class="chart-hit" cx="${p.x}" cy="${p.y}" r="12" fill="transparent" style="cursor:pointer;" onclick="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" ontouchstart="showChartTooltip(event,'${p.date}','${fmt(p.value)}')" />
+  `).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <polyline points="${linePoints}" fill="none" stroke="${lineColor}" stroke-width="2" />
+      ${circles}
+      <text x="${padding}" y="${height - 10}" fill="var(--faint)" font-size="11" font-family="var(--font-mono)">${firstDate}</text>
+      <text x="${width - padding}" y="${height - 10}" fill="var(--faint)" font-size="11" font-family="var(--font-mono)" text-anchor="end">${lastDate}</text>
+      <text x="${padding}" y="16" fill="var(--muted)" font-size="11" font-family="var(--font-mono)">RM ${fmt(maxV)}</text>
+      <text x="${padding}" y="${height - padding + 14}" fill="var(--muted)" font-size="11" font-family="var(--font-mono)">RM ${fmt(minV)}</text>
+    </svg>
+  `;
+}
+
+async function init() {
+  const dateEl = document.getElementById('todayDate');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  await loadHoldings();
+  await loadInvestors();
+  syncTotalCapital();
+  await loadClosedPositions();
+  await loadTransactions();
+  await loadMessages();
+  await loadSnapshots();
+  render();
+  renderHistory();
+  renderTransactions();
+  renderMessages();
+  renderTrendChart();
+  refreshPrices();
+  setInterval(refreshPrices, 30000);
+  setTimeout(recordTodaySnapshot, 3000); // wait for live prices to settle before snapshotting
+}
+
+function authHeaders() {
+  const pw = sessionStorage.getItem('admin_password') || '';
+  return { 'Content-Type': 'application/json', 'X-Admin-Password': pw };
+}
+
+function showAdminGate(errorMsg) {
+  document.getElementById('adminGate').style.display = 'flex';
+  document.getElementById('dashboardRoot').style.display = 'none';
+  const errEl = document.getElementById('adminGateError');
+  errEl.textContent = errorMsg || '';
+}
+
+async function tryAdminLogin() {
+  const pwInput = document.getElementById('adminPasswordInput');
+  const password = pwInput.value;
+  try {
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAdminGate(data.error || 'Incorrect password');
+      return;
+    }
+    sessionStorage.setItem('admin_password', password);
+    document.getElementById('adminGate').style.display = 'none';
+    document.getElementById('dashboardRoot').style.display = 'block';
+    init();
+  } catch (e) {
+    showAdminGate(`Network error: ${e.message}`);
+  }
+}
+
+async function boot() {
+  document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryAdminLogin();
+  });
+  const saved = sessionStorage.getItem('admin_password');
+  if (!saved) {
+    showAdminGate();
+    return;
+  }
+  // Verify the saved password still works before showing the dashboard
+  try {
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: saved }),
+    });
+    if (!res.ok) {
+      sessionStorage.removeItem('admin_password');
+      showAdminGate();
+      return;
+    }
+    document.getElementById('dashboardRoot').style.display = 'block';
+    init();
+  } catch (e) {
+    showAdminGate(`Network error: ${e.message}`);
+  }
+}
+boot();
+</script>
+</body>
+</html>
