@@ -227,10 +227,12 @@
     <div class="card">
       <div class="card-label">Return (on total capital)</div>
       <div class="card-value" id="totalReturn">0.00%</div>
+      <div class="faint mono" id="totalReturnNote" style="font-size:0.7rem; margin-top:4px;">includes FX movement</div>
     </div>
     <div class="card">
       <div class="card-label">Cash / Trading Limit</div>
       <div class="card-value" id="cashBalance">RM 0.00</div>
+      <div class="faint mono" id="cashBalanceUsd" style="font-size:0.75rem; margin-top:4px;"></div>
     </div>
   </div>
   <div class="mono" id="cashWarning" style="font-size:0.75rem; margin-bottom:16px; color:var(--down);"></div>
@@ -560,16 +562,18 @@ function render() {
 
   const cashEl = document.getElementById('cashBalance');
   const cashWarnEl = document.getElementById('cashWarning');
+  const cashUsdEl = document.getElementById('cashBalanceUsd');
   if (cashEl) {
     const cash = equity.cashMYR;
     if (cash < 0) {
       cashEl.textContent = 'RM 0.00';
       cashEl.style.color = 'var(--down)';
+      if (cashUsdEl) cashUsdEl.textContent = `USD ${fmt(equity.cashUSD)} (negative)`;
       if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available USD cash by RM ${fmt(Math.abs(cash))} (at today's exchange rate) — add/increase a customer's contribution or reduce holdings.`;
     } else {
       cashEl.textContent = 'RM ' + fmt(cash);
       cashEl.style.color = 'var(--heading)';
-      cashEl.title = `USD ${fmt(equity.cashUSD)} at today's rate. This cash is tracked as USD, so it moves with the exchange rate — same as your holdings.`;
+      if (cashUsdEl) cashUsdEl.textContent = `USD ${fmt(equity.cashUSD)} at today's rate`;
       if (cashWarnEl) cashWarnEl.textContent = '';
     }
   }
