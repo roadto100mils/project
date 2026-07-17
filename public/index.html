@@ -217,11 +217,11 @@
 
   <div class="cards">
     <div class="card">
-      <div class="card-label">Total Value (MYR)</div>
+      <div class="card-label">Total Asset Value (Stocks + Cash)</div>
       <div class="card-value" id="totalValue">RM 0.00</div>
     </div>
     <div class="card">
-      <div class="card-label">Unrealized Gain/Loss</div>
+      <div class="card-label">Unrealized Gain/Loss (holdings only)</div>
       <div class="card-value" id="totalGain">RM 0.00</div>
     </div>
     <div class="card">
@@ -549,7 +549,7 @@ function render() {
   const overallGain = equity.totalFundEquity - equity.totalCapitalMYR;
   const overallReturnPct = equity.totalCapitalMYR ? (overallGain / equity.totalCapitalMYR) * 100 : 0;
 
-  document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
+  document.getElementById('totalValue').textContent = 'RM ' + fmt(equity.totalFundEquity);
   window.currentTotalValue = totalValue;
   window.currentTotalCost = totalCost;
   const gainEl = document.getElementById('totalGain');
