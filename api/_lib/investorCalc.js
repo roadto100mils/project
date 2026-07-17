@@ -8,6 +8,8 @@
 // later top-up as if it had been invested since the very first contribution.
 
 const { fetchUsQuotes, fetchKlseQuotes, fetchFxRate } = require("./market");
+const { computeFundEquity } = require("./fundCalc");
+const { getContributions, totalContributed } = require("./contributions");
 
 const GUARANTEED_ANNUAL_RATE = 0.06; // 6% p.a., compounded annually, as a floor per lot
 
@@ -35,24 +37,7 @@ function addPeriodMinusOneDay(dateStr, years) {
   return d;
 }
 
-// Returns an investor's contributions as a list of {id, amount, date} lots.
-// Falls back to legacy single contributed+joinDate fields for older records that
-// haven't been migrated to the multi-contribution format yet.
-function getContributions(investor) {
-  if (Array.isArray(investor.contributions) && investor.contributions.length) {
-    return investor.contributions;
-  }
-  if (investor.contributed) {
-    return [{ id: 1, amount: investor.contributed, date: investor.joinDate || null }];
-  }
-  return [];
-}
-
-function totalContributed(investor) {
-  return getContributions(investor).reduce((s, c) => s + (c.amount || 0), 0);
-}
-
-async function computeInvestorSummary(investor, investorList, holdingsList, totalCapital, closedPositions) {
+async function computeInvestorSummary(investor, investorList, holdingsList, closedPositions) {
   const usSymbols = holdingsList.filter((h) => h.exchange === "US").map((h) => h.symbol);
   const klseSymbols = holdingsList.filter((h) => h.exchange === "KLSE").map((h) => h.symbol);
 
@@ -63,25 +48,17 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
   ]);
   const fxRate = fx || 4.7;
 
-  let totalOpenValue = 0;
-  let totalOpenCost = 0;
-  for (const h of holdingsList) {
-    const livePrice = h.exchange === "US" ? usQ.result[h.symbol] : klseQ.result[h.symbol];
-    const price = livePrice !== undefined ? livePrice : h.price;
-    const valueMYR = h.exchange === "US" ? price * h.qty * fxRate : price * h.qty;
-    const costMYR = h.exchange === "US" ? h.avgCost * h.qty * fxRate : h.avgCost * h.qty;
-    totalOpenValue += valueMYR;
-    totalOpenCost += costMYR;
-  }
-  const unrealizedGain = totalOpenValue - totalOpenCost;
-  const realizedPnL = (closedPositions || []).reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const { totalCapitalMYR, totalFundEquity } = computeFundEquity(
+    investorList,
+    holdingsList,
+    closedPositions,
+    usQ.result,
+    klseQ.result,
+    fxRate
+  );
 
-  // Overall fund performance, based on total capital rather than just what's
-  // currently in open positions — this way, realized gains/losses from closed
-  // trades stay reflected even after the position itself is gone.
-  const overallGain = unrealizedGain + realizedPnL;
-  const fundReturnPct = totalCapital > 0 ? overallGain / totalCapital : 0;
-  const totalFundValue = totalCapital + overallGain; // total fund equity (cash + holdings)
+  const overallGain = totalFundEquity - totalCapitalMYR;
+  const fundReturnPct = totalCapitalMYR > 0 ? overallGain / totalCapitalMYR : 0;
 
   const contributions = getContributions(investor);
   const contributed = totalContributed(investor);
@@ -93,7 +70,7 @@ async function computeInvestorSummary(investor, investorList, holdingsList, tota
   const currentValue = actualValue;
   const gain = currentValue - contributed;
   const gainPct = contributed ? (gain / contributed) * 100 : 0;
-  const sharePct = totalFundValue > 0 ? (currentValue / totalFundValue) * 100 : 0;
+  const sharePct = totalFundEquity > 0 ? (currentValue / totalFundEquity) * 100 : 0;
 
   const symbols = [...new Set(holdingsList.map((h) => h.symbol))];
 

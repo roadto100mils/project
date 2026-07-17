@@ -42,14 +42,10 @@ module.exports = async function handler(req, res) {
       res.status(401).json({ error: "Incorrect username or password" });
       return;
     }
-    // Total fund capital is the sum of everyone's contributions (across all lots) —
-    // kept in sync automatically rather than entered separately.
-    const totalCapital = investorList.reduce((s, i) => s + totalContributed(i), 0);
     const summary = await computeInvestorSummary(
       investor,
       investorList,
       holdings || [],
-      totalCapital,
       closedPositions || []
     );
 
@@ -59,11 +55,13 @@ module.exports = async function handler(req, res) {
 
     // Approximate historical value: applies each day's recorded fund-wide return to
     // this investor's current total contribution. Older snapshots recorded before
-    // totalCapital was tracked per-day fall back to today's total capital as an
-    // approximation — a known simplification, same spirit as the live calculation.
+    // fund equity tracking was FX-aware fall back to their own stored totalCapital
+    // (or today's, if that's missing too) as an approximation — a known
+    // simplification, same spirit as the live calculation.
+    const totalCapitalNow = investorList.reduce((s, i) => s + totalContributed(i), 0);
     const myContributed = totalContributed(investor);
     const assetHistory = (snapshots || []).map((s) => {
-      const capitalAtSnapshot = typeof s.totalCapital === "number" && s.totalCapital > 0 ? s.totalCapital : totalCapital;
+      const capitalAtSnapshot = typeof s.totalCapital === "number" && s.totalCapital > 0 ? s.totalCapital : totalCapitalNow;
       const returnPct = capitalAtSnapshot > 0 ? (s.totalFundEquity - capitalAtSnapshot) / capitalAtSnapshot : 0;
       return { date: s.date, value: myContributed * (1 + returnPct) };
     });

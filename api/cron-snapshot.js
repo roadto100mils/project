@@ -10,7 +10,7 @@
 
 const { Redis } = require("@upstash/redis");
 const { fetchUsQuotes, fetchKlseQuotes, fetchFxRate } = require("./_lib/market");
-const { totalContributed } = require("./_lib/investorCalc");
+const { computeFundEquity } = require("./_lib/fundCalc");
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -48,29 +48,22 @@ module.exports = async function handler(req, res) {
     ]);
     const fxRate = fx || 4.7;
 
-    let totalValue = 0;
-    let totalCost = 0;
-    for (const h of holdingsList) {
-      const livePrice = h.exchange === "US" ? usQ.result[h.symbol] : klseQ.result[h.symbol];
-      const price = livePrice !== undefined ? livePrice : h.price;
-      const valueMYR = h.exchange === "US" ? price * h.qty * fxRate : price * h.qty;
-      const costMYR = h.exchange === "US" ? h.avgCost * h.qty * fxRate : h.avgCost * h.qty;
-      totalValue += valueMYR;
-      totalCost += costMYR;
-    }
-
-    const totalCapital = investorList.reduce((s, i) => s + totalContributed(i), 0);
-    const realizedPnL = (closedPositions || []).reduce((s, p) => s + (p.realizedPnL || 0), 0);
-    const overallGain = (totalValue - totalCost) + realizedPnL;
-    const totalFundEquity = totalCapital + overallGain;
-    const cash = totalCapital + realizedPnL - totalCost;
+    const { totalCapitalMYR, cashMYR, openValueMYR, totalFundEquity } = computeFundEquity(
+      investorList,
+      holdingsList,
+      closedPositions || [],
+      usQ.result,
+      klseQ.result,
+      fxRate
+    );
 
     const today = new Date().toISOString().slice(0, 10);
     const existing = (await redis.get("snapshots")) || [];
     const withoutToday = existing.filter((s) => s.date !== today);
-    const updated = [...withoutToday, { date: today, totalFundEquity, totalValue, cash, totalCapital }].sort(
-      (a, b) => a.date.localeCompare(b.date)
-    );
+    const updated = [
+      ...withoutToday,
+      { date: today, totalFundEquity, totalValue: openValueMYR, cash: cashMYR, totalCapital: totalCapitalMYR },
+    ].sort((a, b) => a.date.localeCompare(b.date));
     await redis.set("snapshots", updated);
 
     res.status(200).json({ ok: true, date: today, totalFundEquity });

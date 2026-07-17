@@ -211,7 +211,7 @@
       <span class="mono" id="totalCapitalDisplay" style="color:var(--heading); font-weight:600;">RM 0.00</span>
     </div>
     <p class="faint" style="font-size:0.7rem; margin-top:6px;">
-      Auto-synced as the sum of all customers' contributed amounts below (Customers section). Cash further down is this plus realized P&L, minus the cost of current holdings.
+      Auto-synced as the sum of all customers' contributed amounts below (Customers section). Cash further down is tracked as USD (converted at each contribution's own entry-time rate) and displayed at today's live rate — so it moves with the exchange rate, same as your USD holdings.
     </p>
   </div>
 
@@ -543,9 +543,9 @@ function render() {
   const totalCost = rows.reduce((s, r) => s + r.costMYR, 0);
   const totalGain = totalValue - totalCost; // unrealized gain on currently open positions only
 
-  const totalRealizedPnL = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
-  const overallGain = totalGain + totalRealizedPnL;
-  const overallReturnPct = totalCapital ? (overallGain / totalCapital) * 100 : 0;
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+  const overallGain = equity.totalFundEquity - equity.totalCapitalMYR;
+  const overallReturnPct = equity.totalCapitalMYR ? (overallGain / equity.totalCapitalMYR) * 100 : 0;
 
   document.getElementById('totalValue').textContent = 'RM ' + fmt(totalValue);
   window.currentTotalValue = totalValue;
@@ -556,19 +556,20 @@ function render() {
   const retEl = document.getElementById('totalReturn');
   retEl.textContent = (overallReturnPct >= 0 ? '+' : '') + overallReturnPct.toFixed(2) + '%';
   retEl.style.color = overallReturnPct >= 0 ? 'var(--up)' : 'var(--down)';
-  retEl.title = `Based on total fund capital (RM ${fmt(totalCapital)}), including realized P&L from closed positions (RM ${fmt(totalRealizedPnL)}) and unrealized P&L on open positions (RM ${fmt(totalGain)}).`;
+  retEl.title = `Based on total fund capital (RM ${fmt(equity.totalCapitalMYR)}) vs total fund equity (RM ${fmt(equity.totalFundEquity)}) — includes stock price movement, realized P&L, and USD/MYR exchange rate movement on both holdings and uninvested USD cash.`;
 
   const cashEl = document.getElementById('cashBalance');
   const cashWarnEl = document.getElementById('cashWarning');
   if (cashEl) {
-    const cash = totalCapital + totalRealizedPnL - totalCost;
+    const cash = equity.cashMYR;
     if (cash < 0) {
       cashEl.textContent = 'RM 0.00';
       cashEl.style.color = 'var(--down)';
-      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available capital (total customer contributions + realized P&L) by RM ${fmt(Math.abs(cash))} — add/increase a customer's contribution or reduce holdings.`;
+      if (cashWarnEl) cashWarnEl.textContent = `⚠ Holdings cost exceeds available USD cash by RM ${fmt(Math.abs(cash))} (at today's exchange rate) — add/increase a customer's contribution or reduce holdings.`;
     } else {
       cashEl.textContent = 'RM ' + fmt(cash);
       cashEl.style.color = 'var(--heading)';
+      cashEl.title = `USD ${fmt(equity.cashUSD)} at today's rate. This cash is tracked as USD, so it moves with the exchange rate — same as your holdings.`;
       if (cashWarnEl) cashWarnEl.textContent = '';
     }
   }
@@ -1023,6 +1024,50 @@ function investorGuaranteedValue(inv) {
   }, 0);
 }
 
+// Mirrors api/_lib/fundCalc.js — computes the fund's true equity in MYR, tracking
+// uninvested cash as USD (converted at each contribution's own entry-time rate,
+// displayed at today's live rate) so idle USD cash and US holdings both correctly
+// reflect exchange rate movement, not just stock price movement.
+function computeFundEquityClient(investorList, holdingsList, closedPositionsList, liveFxRate) {
+  let totalCapitalMYR = 0;
+  let totalContributedUSD = 0;
+  for (const inv of investorList) {
+    for (const c of getInvestorContributions(inv)) {
+      const amount = parseFloat(c.amount) || 0;
+      totalCapitalMYR += amount;
+      const entryRate = c.fxRateAtEntry || liveFxRate;
+      totalContributedUSD += entryRate > 0 ? amount / entryRate : 0;
+    }
+  }
+
+  let openCostUSD = 0;
+  let openValueMYR = 0;
+  for (const h of holdingsList) {
+    if (h.exchange === 'US') {
+      openCostUSD += h.avgCost * h.qty;
+      openValueMYR += h.price * h.qty * liveFxRate;
+    } else {
+      openValueMYR += h.price * h.qty;
+    }
+  }
+
+  let realizedUSD = 0;
+  let realizedMYR_KLSE = 0;
+  for (const p of closedPositionsList) {
+    if (p.currency === 'USD') {
+      realizedUSD += (p.exitPrice - p.avgCost) * p.qty;
+    } else {
+      realizedMYR_KLSE += p.realizedPnL || 0;
+    }
+  }
+
+  const cashUSD = totalContributedUSD - openCostUSD + realizedUSD;
+  const cashMYR = cashUSD * liveFxRate;
+  const totalFundEquity = cashMYR + openValueMYR + realizedMYR_KLSE;
+
+  return { totalCapitalMYR, cashUSD, cashMYR, openValueMYR, totalFundEquity };
+}
+
 async function loadInvestors() {
   try {
     const res = await fetch('/api/investors', { headers: authHeaders() });
@@ -1086,13 +1131,10 @@ function renderInvestors() {
   const portalUrlEl = document.getElementById('customerPortalUrl');
   if (portalUrlEl) portalUrlEl.textContent = `${window.location.origin}/customer.html`;
 
-  const openValue = window.currentTotalValue || 0;
-  const openCost = window.currentTotalCost || 0;
-  const unrealizedGain = openValue - openCost;
-  const totalRealizedPnLForInvestors = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
-  const overallGainForInvestors = unrealizedGain + totalRealizedPnLForInvestors;
-  const fundReturnPct = totalCapital > 0 ? overallGainForInvestors / totalCapital : 0;
-  const totalFundEquity = totalCapital + overallGainForInvestors;
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+  const overallGainForInvestors = equity.totalFundEquity - equity.totalCapitalMYR;
+  const fundReturnPct = equity.totalCapitalMYR > 0 ? overallGainForInvestors / equity.totalCapitalMYR : 0;
+  const totalFundEquity = equity.totalFundEquity;
 
   body.innerHTML = investors.map(inv => {
     const contributed = investorTotalContributed(inv);
@@ -1124,14 +1166,15 @@ function renderInvestors() {
     const lotsRows = lots.map(c => {
       const years = yearsSince(c.date);
       const lotGuaranteed = (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
+      const entryRateText = c.fxRateAtEntry ? `@ ${c.fxRateAtEntry.toFixed(4)}` : '@ rate not recorded';
       return `<tr style="background:var(--surface-alt);">
         <td class="faint" style="padding-left:24px; font-size:0.8rem;">Lot</td>
         <td class="num"><input class="edit-input" type="number" value="${c.amount}" onchange="updateContribution(${inv.id},${c.id},'amount',this.value)" /></td>
         <td colspan="2">
           <input class="edit-input" type="date" value="${c.date || ''}" onchange="updateContribution(${inv.id},${c.id},'date',this.value)" />
-          <span class="faint mono" style="font-size:0.75rem; margin-left:8px;">guaranteed today: RM ${fmt(lotGuaranteed)}</span>
+          <span class="faint mono" style="font-size:0.7rem; margin-left:8px;" title="USD/MYR rate when this contribution was recorded — used to track FX exposure on that money">${entryRateText}</span>
         </td>
-        <td colspan="2"></td>
+        <td colspan="2" class="faint mono" style="font-size:0.75rem;">guaranteed today: RM ${fmt(lotGuaranteed)}</td>
         <td class="row-actions"><button class="del" onclick="removeContribution(${inv.id},${c.id})">✕</button></td>
       </tr>`;
     }).join('');
@@ -1164,10 +1207,11 @@ function updateInvestorField(id, field, value) {
 function addContribution(investorId) {
   const cid = contribNextId++;
   const today = new Date().toISOString().slice(0, 10);
+  const entryRate = fxRate();
   investors = investors.map(i => {
     if (i.id !== investorId) return i;
     const contributions = getInvestorContributions(i);
-    return Object.assign({}, i, { contributions: [...contributions, { id: cid, amount: 0, date: today }] });
+    return Object.assign({}, i, { contributions: [...contributions, { id: cid, amount: 0, date: today, fxRateAtEntry: entryRate }] });
   });
   saveInvestors();
   syncTotalCapital();
@@ -1208,7 +1252,8 @@ function addInvestor() {
   const id = investorNextId++;
   const cid = contribNextId++;
   const today = new Date().toISOString().slice(0, 10);
-  investors.push({ id, name: 'New Customer', contributions: [{ id: cid, amount: 0, date: today }], username: `customer${id}`, password: '' });
+  const entryRate = fxRate();
+  investors.push({ id, name: 'New Customer', contributions: [{ id: cid, amount: 0, date: today, fxRateAtEntry: entryRate }], username: `customer${id}`, password: '' });
   saveInvestors();
   syncTotalCapital();
   render();
@@ -1368,12 +1413,11 @@ async function loadSnapshots() {
 
 function recordTodaySnapshot() {
   const today = new Date().toISOString().slice(0, 10);
+  const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
   const totalValue = window.currentTotalValue || 0;
-  const totalCost = window.currentTotalCost || 0;
-  const realizedPnL = closedPositions.reduce((s, p) => s + (p.realizedPnL || 0), 0);
-  const overallGain = (totalValue - totalCost) + realizedPnL;
-  const totalFundEquity = totalCapital + overallGain;
-  const cash = totalCapital + realizedPnL - totalCost;
+  const totalFundEquity = equity.totalFundEquity;
+  const cash = equity.cashMYR;
+  const totalCapital = equity.totalCapitalMYR;
 
   fetch('/api/snapshot', {
     method: 'POST',
