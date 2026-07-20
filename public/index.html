@@ -1021,6 +1021,34 @@ function investorTotalContributed(inv) {
   return getInvestorContributions(inv).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
 }
 
+// Mirrors api/_lib/contributions.js unit helpers — see that file for the full
+// explanation of why units exist (prevents new contributions from diluting or
+// inflating existing investors' gains).
+function getLotUnits(c) {
+  return c.unitsIssued != null ? c.unitsIssued : (parseFloat(c.amount) || 0);
+}
+function investorTotalUnits(inv) {
+  return getInvestorContributions(inv).reduce((s, c) => s + getLotUnits(c), 0);
+}
+function allUnitsOutstanding(investorList) {
+  return investorList.reduce((s, inv) => s + investorTotalUnits(inv), 0);
+}
+function computeNavPerUnit(totalFundEquity, unitsOutstanding) {
+  return unitsOutstanding > 0 ? totalFundEquity / unitsOutstanding : 1;
+}
+// Units outstanding excluding one specific lot — used when pricing a new/edited
+// contribution, so it doesn't count itself when determining the NAV it buys in at.
+function unitsOutstandingExcluding(investorList, excludeInvestorId, excludeContribId) {
+  let total = 0;
+  for (const inv of investorList) {
+    for (const c of getInvestorContributions(inv)) {
+      if (inv.id === excludeInvestorId && c.id === excludeContribId) continue;
+      total += getLotUnits(c);
+    }
+  }
+  return total;
+}
+
 function investorGuaranteedValue(inv) {
   return getInvestorContributions(inv).reduce((s, c) => {
     const years = yearsSince(c.date);
@@ -1136,17 +1164,16 @@ function renderInvestors() {
   if (portalUrlEl) portalUrlEl.textContent = `${window.location.origin}/customer.html`;
 
   const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
-  const overallGainForInvestors = equity.totalFundEquity - equity.totalCapitalMYR;
-  const fundReturnPct = equity.totalCapitalMYR > 0 ? overallGainForInvestors / equity.totalCapitalMYR : 0;
-  const totalFundEquity = equity.totalFundEquity;
+  const unitsOutstanding = allUnitsOutstanding(investors);
+  const nav = computeNavPerUnit(equity.totalFundEquity, unitsOutstanding);
 
   body.innerHTML = investors.map(inv => {
     const contributed = investorTotalContributed(inv);
-    const actualValue = contributed * (1 + fundReturnPct);
+    const myUnits = investorTotalUnits(inv);
     const guaranteedValue = investorGuaranteedValue(inv);
-    const value = actualValue; // Current Value = actual performance only; guarantee shown separately
-    const share = totalFundEquity > 0 ? value / totalFundEquity : 0;
-    const belowGuarantee = guaranteedValue > actualValue;
+    const value = myUnits * nav; // Current Value = units × today's NAV; guarantee shown separately
+    const share = unitsOutstanding > 0 ? myUnits / unitsOutstanding : 0;
+    const belowGuarantee = guaranteedValue > value;
     const lots = getInvestorContributions(inv);
     const isExpanded = expandedInvestorId === inv.id;
 
@@ -1171,6 +1198,7 @@ function renderInvestors() {
       const years = yearsSince(c.date);
       const lotGuaranteed = (parseFloat(c.amount) || 0) * Math.pow(1 + GUARANTEED_ANNUAL_RATE, years);
       const entryRateText = c.fxRateAtEntry ? `@ ${c.fxRateAtEntry.toFixed(4)}` : '@ rate not recorded';
+      const unitsValue = c.unitsIssued != null ? c.unitsIssued : (parseFloat(c.amount) || 0);
       return `<tr style="background:var(--surface-alt);">
         <td class="faint" style="padding-left:24px; font-size:0.8rem;">Lot</td>
         <td class="num"><input class="edit-input" type="number" value="${c.amount}" onchange="updateContribution(${inv.id},${c.id},'amount',this.value)" /></td>
@@ -1178,7 +1206,11 @@ function renderInvestors() {
           <input class="edit-input" type="date" value="${c.date || ''}" onchange="updateContribution(${inv.id},${c.id},'date',this.value)" />
           <span class="faint mono" style="font-size:0.7rem; margin-left:8px;" title="USD/MYR rate when this contribution was recorded — used to track FX exposure on that money">${entryRateText}</span>
         </td>
-        <td colspan="2" class="faint mono" style="font-size:0.75rem;">guaranteed today: RM ${fmt(lotGuaranteed)}</td>
+        <td colspan="2">
+          <span class="faint mono" style="font-size:0.7rem;">units:</span>
+          <input class="edit-input" type="number" step="0.01" value="${unitsValue.toFixed(2)}" style="width:90px;" title="Manually override this lot's units — use when you know the fund's actual value on this contribution's date and want to correct it" onchange="setLotUnitsManually(${inv.id},${c.id},this.value)" />
+          <span class="faint mono" style="font-size:0.7rem;">· guaranteed today: RM ${fmt(lotGuaranteed)}</span>
+        </td>
         <td class="row-actions"><button class="del" onclick="removeContribution(${inv.id},${c.id})">✕</button></td>
       </tr>`;
     }).join('');
@@ -1223,13 +1255,43 @@ function addContribution(investorId) {
 }
 
 function updateContribution(investorId, contribId, field, value) {
-  investors = investors.map(i => {
-    if (i.id !== investorId) return i;
-    const contributions = getInvestorContributions(i).map(c =>
-      c.id === contribId ? Object.assign({}, c, { [field]: field === 'amount' ? (parseFloat(value) || 0) : value }) : c
-    );
-    return Object.assign({}, i, { contributions });
-  });
+  if (field === 'amount') {
+    const newAmount = parseFloat(value) || 0;
+    const oldLot = (investors.find(i => i.id === investorId)?.contributions || [])
+      .find(c => c.id === contribId);
+    const oldAmount = oldLot ? (parseFloat(oldLot.amount) || 0) : 0;
+
+    // Price this lot's units at the NAV that would apply if this contribution's
+    // own (old) amount weren't already sitting in the fund — i.e. the NAV that was
+    // in effect just before this money arrived.
+    const equityNow = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
+    const unitsOthers = unitsOutstandingExcluding(investors, investorId, contribId);
+    const equityExcludingThisLot = equityNow.totalFundEquity - oldAmount;
+
+    let newUnits;
+    if (unitsOthers <= 0 || equityExcludingThisLot <= 0) {
+      newUnits = newAmount; // bootstrap: first-ever contribution, NAV starts at 1.00/unit
+    } else {
+      const nav = equityExcludingThisLot / unitsOthers;
+      newUnits = nav > 0 ? newAmount / nav : newAmount;
+    }
+
+    investors = investors.map(i => {
+      if (i.id !== investorId) return i;
+      const contributions = getInvestorContributions(i).map(c =>
+        c.id === contribId ? Object.assign({}, c, { amount: newAmount, unitsIssued: newUnits }) : c
+      );
+      return Object.assign({}, i, { contributions });
+    });
+  } else {
+    investors = investors.map(i => {
+      if (i.id !== investorId) return i;
+      const contributions = getInvestorContributions(i).map(c =>
+        c.id === contribId ? Object.assign({}, c, { [field]: value }) : c
+      );
+      return Object.assign({}, i, { contributions });
+    });
+  }
   saveInvestors();
   syncTotalCapital();
   render();
@@ -1243,6 +1305,19 @@ function removeContribution(investorId, contribId) {
   });
   saveInvestors();
   syncTotalCapital();
+  render();
+}
+
+function setLotUnitsManually(investorId, contribId, value) {
+  const newUnits = parseFloat(value) || 0;
+  investors = investors.map(i => {
+    if (i.id !== investorId) return i;
+    const contributions = getInvestorContributions(i).map(c =>
+      c.id === contribId ? Object.assign({}, c, { unitsIssued: newUnits }) : c
+    );
+    return Object.assign({}, i, { contributions });
+  });
+  saveInvestors();
   render();
 }
 

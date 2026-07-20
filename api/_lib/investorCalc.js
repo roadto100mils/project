@@ -1,15 +1,23 @@
 // Shared calculation logic: given an investor, the full investor list, and the fund's
-// holdings, compute what that investor should see (their share of the fund value,
-// with a guaranteed minimum annualized return per contribution).
+// holdings, compute what that investor should see (their unit-based share of the
+// fund value, with a guaranteed minimum annualized return per contribution).
 //
 // Investors can have multiple contributions at different dates (e.g. RM5,000 in July,
 // another RM5,000 in October) — each is tracked separately as its own "lot" so the
-// 6% guarantee compounds correctly from each lot's own date, instead of treating a
-// later top-up as if it had been invested since the very first contribution.
+// 6% guarantee compounds correctly from each lot's own date, AND so each lot buys
+// fund "units" at whatever the fund's NAV/unit happened to be on that date. This is
+// what stops a new investor's contribution from diluting (or inflating) existing
+// investors' gains — same mechanism a real mutual fund uses for subscriptions.
 
 const { fetchUsQuotes, fetchKlseQuotes, fetchFxRate } = require("./market");
 const { computeFundEquity } = require("./fundCalc");
-const { getContributions, totalContributed } = require("./contributions");
+const {
+  getContributions,
+  totalContributed,
+  totalUnits,
+  totalUnitsOutstanding,
+  navPerUnit,
+} = require("./contributions");
 
 const GUARANTEED_ANNUAL_RATE = 0.06; // 6% p.a., compounded annually, as a floor per lot
 
@@ -48,7 +56,7 @@ async function computeInvestorSummary(investor, investorList, holdingsList, clos
   ]);
   const fxRate = fx || 4.7;
 
-  const { totalCapitalMYR, totalFundEquity } = computeFundEquity(
+  const { totalFundEquity } = computeFundEquity(
     investorList,
     holdingsList,
     closedPositions,
@@ -57,26 +65,26 @@ async function computeInvestorSummary(investor, investorList, holdingsList, clos
     fxRate
   );
 
-  const overallGain = totalFundEquity - totalCapitalMYR;
-  const fundReturnPct = totalCapitalMYR > 0 ? overallGain / totalCapitalMYR : 0;
+  const unitsOutstanding = totalUnitsOutstanding(investorList);
+  const nav = navPerUnit(totalFundEquity, unitsOutstanding);
 
   const contributions = getContributions(investor);
   const contributed = totalContributed(investor);
+  const myUnits = totalUnits(investor);
 
-  // Simplification retained: actual performance applies the fund's overall return
-  // equally to all of an investor's money, regardless of which lot/date it came in.
-  // The guarantee below is calculated per-lot and is more precise.
-  const actualValue = contributed * (1 + fundReturnPct);
-  const currentValue = actualValue;
+  // Unit-based value: this investor's units × today's NAV/unit. Correctly excludes
+  // gains/losses made before this investor's units existed, and includes their fair
+  // share of everything that's happened since.
+  const currentValue = myUnits * nav;
   const gain = currentValue - contributed;
   const gainPct = contributed ? (gain / contributed) * 100 : 0;
-  const sharePct = totalFundEquity > 0 ? (currentValue / totalFundEquity) * 100 : 0;
+  const sharePct = unitsOutstanding > 0 ? (myUnits / unitsOutstanding) * 100 : 0;
 
   const symbols = [...new Set(holdingsList.map((h) => h.symbol))];
 
   // Per-lot guarantee breakdown: each contribution compounds independently from its
   // own date, so a later top-up isn't unfairly credited with guarantee growth from
-  // before it was even invested.
+  // before it was even invested. This floor is compared against the unit-based value.
   let totalGuaranteedValue = 0;
   const guaranteeBreakdown = contributions
     .filter((c) => c.date)
@@ -102,11 +110,17 @@ async function computeInvestorSummary(investor, investorList, holdingsList, clos
     currentValue,
     gain,
     gainPct,
-    belowGuarantee: totalGuaranteedValue > actualValue,
+    belowGuarantee: totalGuaranteedValue > currentValue,
     guaranteeBreakdown,
     symbols,
     errors: [...usQ.errors, ...klseQ.errors],
   };
 }
 
-module.exports = { computeInvestorSummary, GUARANTEED_ANNUAL_RATE, yearsSince, getContributions, totalContributed };
+module.exports = {
+  computeInvestorSummary,
+  GUARANTEED_ANNUAL_RATE,
+  yearsSince,
+  getContributions,
+  totalContributed,
+};
