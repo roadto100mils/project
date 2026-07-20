@@ -323,9 +323,10 @@
 
   <div style="margin-top:56px;">
     <h1 style="font-size:1.4rem;">Investor Shares</h1>
-    <p class="faint" style="font-size:0.8rem; margin-top:8px; margin-bottom:20px;">
-      Each customer's value reflects their actual proportional share of the fund's performance. A 6% per annum guaranteed floor (compounded from their join date) is shown separately as a target/commitment — it doesn't change the value above. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
+    <p class="faint" style="font-size:0.8rem; margin-top:8px; margin-bottom:12px;">
+      Each customer's value is their units × today's NAV per unit — new contributions buy units at the current NAV, so they don't dilute or inflate existing customers' gains. A 6% per annum guaranteed floor (compounded from their join date) is shown separately as a target/commitment — it doesn't change the value above. Set a username and password for each customer below, and share those credentials with them directly — they'll sign in at the same portal page and only see their own value, not the underlying holdings detail.
     </p>
+    <div class="mono" id="navDisplay" style="font-size:0.85rem; margin-bottom:20px; color:var(--heading);"></div>
 
     <div class="table-wrap">
       <table>
@@ -1166,6 +1167,11 @@ function renderInvestors() {
   const equity = computeFundEquityClient(investors, holdings, closedPositions, fxRate());
   const unitsOutstanding = allUnitsOutstanding(investors);
   const nav = computeNavPerUnit(equity.totalFundEquity, unitsOutstanding);
+
+  const navEl = document.getElementById('navDisplay');
+  if (navEl) {
+    navEl.textContent = `NAV: RM ${nav.toFixed(4)} / unit  ·  ${fmt(unitsOutstanding)} units outstanding  ·  Total Fund Equity: RM ${fmt(equity.totalFundEquity)}`;
+  }
 
   body.innerHTML = investors.map(inv => {
     const contributed = investorTotalContributed(inv);
